@@ -3,7 +3,7 @@
  * Provides 100% offline functionality for the app shell, engine, and pre-bundled assets.
  */
 
-const CACHE_NAME = 'amoled-studio-v3';
+const CACHE_NAME = 'amoled-studio-v4';
 
 const APP_SHELL = [
   './',
@@ -13,6 +13,7 @@ const APP_SHELL = [
   './src/default_assets.js',
   './src/camera_engine.js',
   './src/grading_engine.js',
+  './src/mp4-muxer.js',
   './src/exporter.js',
   './src/wallpaper.js',
   './icons/icon-192.png',

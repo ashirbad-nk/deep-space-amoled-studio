@@ -647,7 +647,7 @@
       }
 
       // Advance animation timeline if active and on studio screen
-      if (isPlaying && !isRecording && currentScreen === 'studio') {
+      if ((isPlaying || isRecording) && currentScreen === 'studio') {
         const step = (deltaMs / 1000.0) / loopDurationSec * speedMultiplier;
         progress = (progress + step) % 1.0;
         if (progress < 0) progress += 1.0;
@@ -669,22 +669,23 @@
   }
 
   /**
-   * Renders the current frame onto the canvas
+   * Renders the current frame onto the canvas (supports rendering arbitrary progress)
    */
-  function renderFrame() {
-    const vw = canvas.width;
-    const vh = canvas.height;
+  function renderFrame(targetProgress = null, targetCanvas = canvas, targetCtx = ctx) {
+    const p = (targetProgress !== null) ? targetProgress : progress;
+    const vw = targetCanvas.width;
+    const vh = targetCanvas.height;
 
-    const cam = cameraEngine.solveCamera(progress, vw, vh);
+    const cam = cameraEngine.solveCamera(p, vw, vh);
     const rect = cam.sourceRect;
 
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, vw, vh);
+    targetCtx.fillStyle = '#000000';
+    targetCtx.fillRect(0, 0, vw, vh);
 
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    targetCtx.imageSmoothingEnabled = true;
+    targetCtx.imageSmoothingQuality = 'high';
 
-    ctx.drawImage(
+    targetCtx.drawImage(
       activeRenderDrawable,
       rect.x, rect.y, rect.w, rect.h,
       0, 0, vw, vh
@@ -1568,24 +1569,43 @@
       btnRecordVideo.addEventListener('click', () => {
         if (isRecording || !imageLoaded) return;
         const recordSec = parseInt(document.getElementById('select-record-duration').value, 10) || 30;
+        const formatSelect = document.getElementById('select-record-format');
+        const format = formatSelect ? formatSelect.value : 'mp4';
+
         isRecording = true;
         btnRecordVideo.textContent = '🔴 Recording...';
         recordBanner.classList.add('active');
 
-        Exporter.recordVideo(
+        // High-performance deterministic 60 FPS recording with WebCodecs H.264 MP4 & MediaRecorder fallback
+        Exporter.recordVideo({
           canvas,
-          recordSec,
-          (pct, elapsed, total) => {
-            recordBarFill.style.width = `${pct}%`;
-            recordText.textContent = `Recording 60 FPS: ${Math.round(pct)}% (${elapsed.toFixed(1)}s / ${total}s)...`;
+          renderFrameFn: (p, targetCanvas, targetCtx) => {
+            renderFrame(p, targetCanvas || canvas, targetCtx || ctx);
+            progress = p; // Keep scrubber & studio preview strictly in sync
+            updateScrubberUI();
           },
-          (blob, filename) => {
+          durationSec: recordSec,
+          format: format,
+          loopDurationSec: loopDurationSec,
+          speedMultiplier: speedMultiplier,
+          startProgress: progress,
+          onProgress: (pct, elapsed, total) => {
+            recordBarFill.style.width = `${pct}%`;
+            recordText.textContent = `Rendering 60 FPS (${format.toUpperCase()}): ${Math.round(pct)}% (${elapsed.toFixed(1)}s / ${total}s)...`;
+          },
+          onFinish: (blob, filename) => {
             isRecording = false;
             btnRecordVideo.textContent = '🎥 Record & Download Video';
             recordBanner.classList.remove('active');
-            console.log(`[Studio] Video downloaded: ${filename}`);
+            console.log(`[Studio] Video downloaded: ${filename} (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
+          },
+          onError: (err) => {
+            isRecording = false;
+            btnRecordVideo.textContent = '🎥 Record & Download Video';
+            recordBanner.classList.remove('active');
+            alert('Video recording failed: ' + (err.message || err));
           }
-        );
+        });
       });
     }
   }

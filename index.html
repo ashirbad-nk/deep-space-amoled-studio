@@ -358,6 +358,13 @@
             Records the camera loop directly from canvas at 60 FPS using browser hardware media encoders.
           </p>
           <div style="display: flex; gap: 8px; align-items: center;">
+            <label style="font-size: 12px; color: #fff;">Format:</label>
+            <select id="select-record-format" style="flex: 1;">
+              <option value="mp4" selected>🎬 MP4 Video (H.264 Universal)</option>
+              <option value="webm">🌐 WebM Video (VP9/VP8)</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
             <label style="font-size: 12px; color: #fff;">Duration:</label>
             <select id="select-record-duration" style="flex: 1;">
               <option value="10">10 Seconds (Quick Preview)</option>
@@ -465,6 +472,7 @@
   <script src="src/default_assets.js?v=3.0"></script>
   <script src="src/camera_engine.js?v=3.0"></script>
   <script src="src/grading_engine.js?v=3.0"></script>
+  <script src="src/mp4-muxer.js?v=3.0"></script>
   <script src="src/exporter.js?v=3.0"></script>
   <script src="src/wallpaper.js?v=3.0"></script>
 </body>
