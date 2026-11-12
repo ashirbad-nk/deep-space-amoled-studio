@@ -22,6 +22,7 @@
   // Available Resolution Presets
   const PRESETS = {
     'fullscreen': { label: 'Native Window / Fill Screen', w: 0, h: 0, isNative: true },
+    'original-ratio': { label: '🖼️ Match Source Image Ratio (Auto)', w: 0, h: 0, isOriginalRatio: true },
     'iphone-16-pro': { label: 'iPhone 15/16 Pro (1179 x 2556, 19.5:9)', w: 1179, h: 2556 },
     'iphone-pro-max': { label: 'iPhone Pro Max (1290 x 2796, 19.5:9)', w: 1290, h: 2796 },
     'galaxy-s24-ultra': { label: 'Galaxy S24 Ultra (1440 x 3120, 19.5:9)', w: 1440, h: 3120 },
@@ -607,7 +608,18 @@
     let targetW = winW;
     let targetH = winH;
 
-    if (!preset.isNative && preset.w > 0 && preset.h > 0) {
+    if (preset.isOriginalRatio && rawSourceImage && rawSourceImage.naturalWidth && rawSourceImage.naturalHeight) {
+      const imgAspect = rawSourceImage.naturalWidth / rawSourceImage.naturalHeight;
+      const screenAspect = winW / winH;
+
+      if (screenAspect > imgAspect) {
+        targetH = winH;
+        targetW = Math.round(targetH * imgAspect);
+      } else {
+        targetW = winW;
+        targetH = Math.round(targetW / imgAspect);
+      }
+    } else if (!preset.isNative && preset.w > 0 && preset.h > 0) {
       const targetAspect = preset.w / preset.h;
       const screenAspect = winW / winH;
 
