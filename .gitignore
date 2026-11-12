@@ -1,0 +1,17 @@
+# Raw source images (can be downloaded via tools/fetch_astro.py)
+images/raw/
+
+# Temporary / OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Python / Node artifacts
+__pycache__/
+*.pyc
+node_modules/
+.env

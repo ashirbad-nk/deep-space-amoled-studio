@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#05070f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Generate seamless 60 FPS AMOLED-graded looping live wallpapers from astronomical deep space imagery. 100% client-side PWA.">
+  <title>Deep Space AMOLED Wallpaper Studio - 60 FPS Cinematic Looper</title>
+  
+  <!-- PWA Manifest & App Icons -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+
+  <!-- Floating Image Resolution & Quality Toast Notification -->
+  <div id="toast-image-specs" class="image-specs-toast">
+    <div class="toast-header">
+      <div class="toast-title-group">
+        <span class="toast-icon">📐</span>
+        <strong id="toast-image-title">Celestial Image Specs</strong>
+      </div>
+      <button id="btn-close-toast" class="btn-close-toast" title="Dismiss notification">&times;</button>
+    </div>
+    <div class="toast-body">
+      <div class="toast-res-row">
+        <span id="toast-res-dim" class="toast-res-val">5,120 &times; 2,965 px</span>
+        <span id="toast-res-mp" class="toast-res-tag">15.2 MP</span>
+        <span id="toast-res-badge" class="badge-tag tier-ultra">🟢 Ultra-HD 5K</span>
+      </div>
+      <p id="toast-res-eval" class="toast-res-eval">
+        Pristine high-resolution master. Macro pan-and-zoom will stay crystal-sharp.
+      </p>
+      <div class="toast-meta-grid">
+        <div class="toast-meta-item">
+          <span>Aspect Ratio:</span>
+          <strong id="toast-res-aspect">1.73:1 (16:9)</strong>
+        </div>
+        <div class="toast-meta-item">
+          <span>AMOLED Score:</span>
+          <strong id="toast-res-amoled" style="color: #51cf66;">~16% True Black</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SCREEN 1: CELESTIAL DISCOVERY & SOURCING ==================== -->
+  <div id="screen-discovery" class="screen-container">
+    <!-- Top Header Bar -->
+    <header class="discovery-header">
+      <div class="brand-group">
+        <div class="brand-badge-large">
+          <span class="pulsing-star"></span>
+          <div class="brand-titles">
+            <h1>AMOLED Deep Space Studio</h1>
+            <span class="brand-subtitle">60 FPS Seamless Cinematic Wallpaper Engine</span>
+          </div>
+        </div>
+        <div class="pwa-header-actions">
+          <span id="pwa-status-badge" class="badge-status">⚡ 100% Offline Ready</span>
+          <button id="btn-pwa-install" class="btn-install" style="display: none;">
+            📲 Install PWA
+          </button>
+        </div>
+      </div>
+
+      <div class="header-right-actions">
+        <button id="btn-enter-studio" class="btn-primary-glow" style="display: none;">
+          Enter Studio &rarr;
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Discovery Body -->
+    <main class="discovery-body">
+      <!-- Search & Exploration Hero -->
+      <section class="discovery-hero">
+        <div class="hero-content">
+          <h2 class="hero-title">Step 1: Discover Your Celestial Vista</h2>
+          <p class="hero-desc">
+            Explore breathtaking deep space phenomena, search NASA & ESA/ESO Wikimedia archives, or upload your own 4K/8K wallpaper.
+            Every scene is graded for true OLED <code>#000000</code> blacks and animated with a seamless, jerk-free 60 FPS camera loop.
+          </p>
+        </div>
+
+        <!-- Global Search Bar & Multi-Archive Selector -->
+        <div class="search-box-container">
+          <select id="select-archive-source" class="search-archive-select" title="Choose which space archive to search">
+            <option value="all">🌐 All Space Archives (NASA + Wikimedia + ESA)</option>
+            <option value="nasa">🚀 NASA Archives (Hubble, JWST, JPL)</option>
+            <option value="wikimedia">🌌 Wikimedia Astrophotography (ESO, VLT, ALMA)</option>
+          </select>
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input 
+              type="text" 
+              id="global-cosmic-search" 
+              placeholder="Search cosmic objects (e.g. 'orion', 'pillars', 'galaxy', 'jupiter', 'black hole', 'andromeda')..."
+              autocomplete="off"
+            >
+            <button id="btn-clear-search" class="btn-clear" style="display: none;">&times;</button>
+          </div>
+          <button id="btn-search-nasa-action" class="btn-nasa-search" title="Search public archives in real-time">
+            🚀 Search Archives
+          </button>
+        </div>
+
+        <!-- Quick Topics Suggestion Row -->
+        <div class="quick-topics-row">
+          <span>Popular Discoveries:</span>
+          <button class="quick-topic-btn" data-query="Orion Nebula">🔭 Orion Nebula</button>
+          <button class="quick-topic-btn" data-query="Andromeda Galaxy">🌀 Andromeda Galaxy</button>
+          <button class="quick-topic-btn" data-query="Black Hole">🕳️ Black Hole</button>
+          <button class="quick-topic-btn" data-query="Crab Nebula">🦀 Crab Nebula</button>
+          <button class="quick-topic-btn" data-query="Saturn Rings">🪐 Saturn Rings</button>
+          <button class="quick-topic-btn" data-query="Deep Field">🌌 Deep Field</button>
+        </div>
+
+        <!-- Category Filter Chips -->
+        <div class="category-chips-scroll">
+          <button class="chip active" data-filter="all">🌟 All Curated (9)</button>
+          <button class="chip" data-filter="cliffs">⛰️ Cosmic Cliffs</button>
+          <button class="chip" data-filter="pillars">🏛️ Pillars of Creation</button>
+          <button class="chip" data-filter="galaxies">🌀 Spiral Galaxies</button>
+          <button class="chip" data-filter="webs">🕸️ Nebular Webs</button>
+          <button class="chip" data-filter="rings">💍 Stellar Rings</button>
+          <button class="chip" data-filter="planets">🪐 Solar System</button>
+          <button class="chip" data-filter="void">🔭 Ancient Deep Void</button>
+          <button class="chip chip-nasa" data-filter="nasa-archive">🛸 NASA Public Archives</button>
+          <button class="chip chip-upload" data-filter="custom-upload">📁 Upload / Custom</button>
+        </div>
+      </section>
+
+      <!-- Section A: Curated Showcase Grid -->
+      <section id="section-curated-grid" class="cards-section">
+        <div class="section-heading-row">
+          <h3 class="section-title">✨ Curated Astronomical Masterpieces (Instant Offline Loading)</h3>
+          <span class="section-count" id="curated-count">9 Objects</span>
+        </div>
+
+        <div class="celestial-grid" id="curated-cards-container">
+          <!-- Populated dynamically with high-speed local WebP thumbnails -->
+        </div>
+      </section>
+
+      <!-- Section B: NASA Public Image Archive Search Results -->
+      <section id="section-nasa-results" class="cards-section" style="display: none;">
+        <div class="section-heading-row">
+          <div class="nasa-heading-group">
+            <h3 class="section-title">🛸 NASA Deep Space Archive Results</h3>
+            <span class="nasa-live-badge">Live API</span>
+          </div>
+          <span class="section-count" id="nasa-results-count">Searching...</span>
+        </div>
+        <div id="nasa-loading-spinner" class="nasa-spinner-box" style="display: none;">
+          <div class="cosmic-spinner"></div>
+          <span>Querying NASA Image and Video Library...</span>
+        </div>
+        <div class="celestial-grid" id="nasa-cards-container"></div>
+      </section>
+
+      <!-- Section C: Custom Image Upload & URL Panel -->
+      <section id="section-custom-sources" class="custom-sources-panel">
+        <div class="custom-card upload-dropzone-card" id="dropzone-box">
+          <div class="dropzone-icon">📁</div>
+          <div class="dropzone-text">
+            <h4>Drop Any Astronomical Image Here</h4>
+            <p>Supports PNG, JPG, WebP, AVIF up to 8K. Drag and drop anywhere or click to browse.</p>
+          </div>
+          <input type="file" id="file-picker-input" accept="image/*" style="display: none;">
+          <button class="btn-browse" onclick="document.getElementById('file-picker-input').click()">
+            Browse Files
+          </button>
+        </div>
+
+        <div class="custom-card url-input-card">
+          <div class="url-card-header">
+            <h4>🌐 Load Image from Web URL</h4>
+            <p>Paste any direct link to an astronomical or high-res photo.</p>
+          </div>
+          <div class="url-input-row">
+            <input type="text" id="custom-url-field" placeholder="https://cdn.esawebb.org/.../image.jpg">
+            <button id="btn-fetch-custom-url" class="btn-primary">Load &rarr;</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+
+  <!-- ==================== SCREEN 2: LIVE WALLPAPER STUDIO ==================== -->
+  <div id="screen-studio" class="screen-container hidden">
+    <!-- Drag & Drop Overlay -->
+    <div id="drop-zone">Drop Any Astronomical Image Here</div>
+
+    <!-- Video Recording Banner Overlay -->
+    <div id="record-progress-banner">
+      <div id="record-progress-text" style="font-size: 13px; font-weight: 600; color: #00e5ff;">Recording 60 FPS Video...</div>
+      <div class="record-bar-track">
+        <div id="record-bar-fill" class="record-bar-fill"></div>
+      </div>
+      <div style="font-size: 11px; color: #8b9bb4;">Encoding frames directly in browser...</div>
+    </div>
+
+    <!-- Viewport Stage -->
+    <div id="viewport-container">
+      <canvas id="wallpaper-canvas"></canvas>
+    </div>
+
+    <!-- Radar Trajectory Mini-Map -->
+    <div id="radar-container">
+      <canvas id="radar-canvas"></canvas>
+      <div id="radar-telemetry" class="radar-telemetry">POS: --%, --% | ZOOM: --x</div>
+    </div>
+
+    <!-- AMOLED Inspector Active Legend -->
+    <div id="amoled-legend">
+      <strong>AMOLED INSPECTOR:</strong> Pixels in magenta are <strong>RGB(0,0,0)</strong> (OLED Subpixels Physically OFF)
+    </div>
+
+    <!-- ==================== STUDIO DRAWER PANELS ==================== -->
+
+    <!-- Drawer 1: AMOLED Color Grading -->
+    <div class="studio-drawer" id="drawer-grade">
+      <div class="drawer-header">
+        <div class="drawer-title">🖤 In-Browser AMOLED True-Black Grading</div>
+        <button class="btn-close">&times;</button>
+      </div>
+      <div class="drawer-body">
+        <div class="telemetry-card">
+          <div class="telemetry-row">
+            <span>Raw Image True-Black:</span>
+            <span id="stat-raw-black" style="color: #ff6b6b; font-family: monospace;">0.00%</span>
+          </div>
+          <div class="telemetry-row">
+            <span>Graded True-Black:</span>
+            <span id="stat-graded-black" style="color: #51cf66; font-family: monospace; font-weight: 700;">--%</span>
+          </div>
+          <div class="telemetry-row">
+            <span>OLED Battery Power Saved:</span>
+            <span id="stat-oled-savings" style="color: var(--accent-cyan); font-family: monospace;">--%</span>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">
+            <span>Black Floor Threshold (T_black):</span>
+            <span id="val-black-floor" class="val">22</span>
+          </div>
+          <input type="range" id="slider-black-floor" min="0" max="60" value="22">
+          <span style="font-size: 10px; color: var(--text-muted);">Pushes background sky noise below threshold to strict RGB(0,0,0).</span>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">
+            <span>Soft-Knee Width (Cubic Hermite):</span>
+            <span id="val-knee-width" class="val">24</span>
+          </div>
+          <input type="range" id="slider-knee-width" min="5" max="50" value="24">
+          <span style="font-size: 10px; color: var(--text-muted);">Prevents staircasing and color banding on faint nebular gas clouds.</span>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">
+            <span>Star Mask Protection:</span>
+            <span id="val-star-protect" class="val">85%</span>
+          </div>
+          <input type="range" id="slider-star-protect" min="0" max="100" value="85">
+          <span style="font-size: 10px; color: var(--text-muted);">Protects pinpoint background stars from being crushed to black.</span>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">
+            <span>Nebular Dynamic Contrast:</span>
+            <span id="val-contrast" class="val">1.08x</span>
+          </div>
+          <input type="range" id="slider-contrast" min="0.80" max="1.40" step="0.02" value="1.08">
+        </div>
+
+        <button id="btn-bake-grade" class="btn-primary" style="padding: 10px;">✨ Apply & Bake AMOLED Grade</button>
+      </div>
+    </div>
+
+    <!-- Drawer 2: Spline Editor & Randomization -->
+    <div class="studio-drawer" id="drawer-spline">
+      <div class="drawer-header">
+        <div class="drawer-title">✏️ Spline Trajectory Editor & Randomizer</div>
+        <button class="btn-close">&times;</button>
+      </div>
+      <div class="drawer-body">
+        <span style="font-size: 11px; color: var(--text-muted);">
+          Interactive Camera Map: <strong>Click and drag</strong> any waypoint handle to re-route the camera loop.
+        </span>
+
+        <!-- Interactive Waypoint Map Canvas -->
+        <div id="editor-canvas-container">
+          <canvas id="editor-canvas"></canvas>
+        </div>
+
+        <!-- Waypoint Node Controls -->
+        <div class="telemetry-card">
+          <div class="field-label">
+            <span>Selected Node: <strong id="selected-wp-label" style="color: #fff;">P0</strong></span>
+            <span>Zoom: <strong id="val-wp-zoom" class="val">1.2x</strong></span>
+          </div>
+          <input type="range" id="slider-wp-zoom" min="1.1" max="4.5" step="0.1" value="1.2">
+          <div class="editor-actions" style="margin-top: 6px;">
+            <button id="btn-add-wp" style="flex: 1;">+ Add Point</button>
+            <button id="btn-remove-wp" style="flex: 1;">🗑 Delete Point</button>
+          </div>
+        </div>
+
+        <!-- Randomization & Presets -->
+        <div class="field-row">
+          <button id="btn-randomize-spline" class="btn-primary" style="padding: 10px; font-size: 13px;">
+            🎲 Randomize Spline Path
+          </button>
+          <span style="font-size: 10px; color: var(--text-muted); text-align: center;">
+            Procedurally generates a new harmonious, C^1/C^2 closed loop covering ~85% of the celestial image.
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drawer 3: Export (HTML & Video) -->
+    <div class="studio-drawer" id="drawer-export">
+      <div class="drawer-header">
+        <div class="drawer-title">💾 Export Wallpapers & Video</div>
+        <button class="btn-close">&times;</button>
+      </div>
+      <div class="drawer-body">
+        <!-- Option A: Standalone HTML -->
+        <div class="telemetry-card" style="gap: 10px;">
+          <div style="font-weight: 700; color: var(--accent-cyan); font-size: 13px;">
+            1. Standalone HTML Wallpaper (100% Self-Contained)
+          </div>
+          <p style="font-size: 11px; color: #8b9bb4; line-height: 1.4;">
+            Compiles active graded image (WebP data URI), custom spline waypoints, and 60 FPS engine into a single file. Zero backend server required.
+            Works instantly in <strong>Hidamari (Linux Flatpak)</strong>, <strong>Wallpaper Engine</strong>, <strong>Lively Wallpaper</strong>, or mobile.
+          </p>
+          <button id="btn-export-html" class="btn-primary" style="padding: 10px;">
+            💾 Download Standalone HTML
+          </button>
+        </div>
+
+        <!-- Option B: MP4 / WebM Video -->
+        <div class="telemetry-card" style="gap: 10px;">
+          <div style="font-weight: 700; color: var(--accent-magenta); font-size: 13px;">
+            2. Export MP4 / WebM 60 FPS Video Recording
+          </div>
+          <p style="font-size: 11px; color: #8b9bb4; line-height: 1.4;">
+            Records the camera loop directly from canvas at 60 FPS using browser hardware media encoders.
+          </p>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <label style="font-size: 12px; color: #fff;">Duration:</label>
+            <select id="select-record-duration" style="flex: 1;">
+              <option value="10">10 Seconds (Quick Preview)</option>
+              <option value="30" selected>30 Seconds</option>
+              <option value="60">60 Seconds (Full Tour)</option>
+            </select>
+          </div>
+          <button id="btn-record-video" class="btn-accent" style="padding: 10px;">
+            🎥 Record & Download Video
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MAIN GLASSMORPHIC HUD ==================== -->
+    <div class="hud-layer">
+      <!-- Top Bar Controls -->
+      <header class="top-bar hud-interactive">
+        <div class="hud-card">
+          <!-- Back to Discovery Portal Button -->
+          <button id="btn-switch-discovery" class="btn-back-discovery" title="Explore and change celestial image source">
+            &larr; 🌌 Change Vista
+          </button>
+
+          <div class="brand-badge">
+            <span class="dot"></span>
+            <span>AMOLED Studio</span>
+          </div>
+
+          <!-- Studio Drawer Nav Tabs -->
+          <div class="studio-tabs">
+            <button class="tab-btn" data-drawer="drawer-grade" title="In-Browser AMOLED Color Grading">🖤 AMOLED</button>
+            <button class="tab-btn" data-drawer="drawer-spline" title="Interactive Spline Editor & Randomizer">✏️ Spline</button>
+            <button class="tab-btn" data-drawer="drawer-export" title="Export Standalone HTML or MP4 Video">💾 Export</button>
+          </div>
+        </div>
+
+        <div class="hud-card">
+          <div class="control-group">
+            <label for="select-preset">Device Preset:</label>
+            <select id="select-preset"></select>
+          </div>
+
+          <div class="control-group">
+            <label for="select-duration">Loop:</label>
+            <select id="select-duration">
+              <option value="30">30 Seconds</option>
+              <option value="60">60 Seconds</option>
+              <option value="120">2 Minutes</option>
+              <option value="180" selected>3 Minutes (10,800 frames)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="hud-card">
+          <div id="hud-res-badge" class="hud-res-badge" title="Click to view detailed image resolution specs">
+            📐 -- &times; -- (-- MP) &bull; --
+          </div>
+          <div id="fps-counter" class="fps-badge">60 FPS</div>
+          <button id="btn-hide-hud" title="Toggle HUD visibility (Hotkey: H)">🕶 Hide HUD (H)</button>
+        </div>
+      </header>
+
+      <!-- Bottom Bar Controls -->
+      <footer class="bottom-bar hud-interactive">
+        <div class="hud-card timeline-card">
+          <!-- Scrubbing Bar -->
+          <div class="timeline-row">
+            <span id="time-current" class="time-display">00:00</span>
+            <input type="range" id="timeline-scrubber" class="scrubber-slider" min="0" max="1000" value="0">
+            <span id="time-total" class="time-display">03:00</span>
+          </div>
+
+          <!-- Action Controls -->
+          <div class="bottom-actions">
+            <div class="btn-group">
+              <button id="btn-play-pause" class="btn-icon">⏸ Pause</button>
+              <div class="control-group">
+                <label for="select-speed">Speed:</label>
+                <select id="select-speed">
+                  <option value="0.5">0.5x</option>
+                  <option value="1.0" selected>1.0x (Cinematic)</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="2.0">2.0x</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="btn-group">
+              <button id="btn-inspector" class="btn-icon" title="Toggle OLED Pure Black Inspector (Hotkey: B)">🖤 AMOLED Check (B)</button>
+              <button id="btn-radar" class="btn-icon active" title="Toggle Radar Mini-Map (Hotkey: M)">🧭 Radar (M)</button>
+              <button id="btn-fullscreen" class="btn-icon" title="Toggle Fullscreen (Hotkey: F)">⛶ Fullscreen (F)</button>
+            </div>
+
+            <div class="hint-badge">
+              Hotkeys: [Space] Pause &bull; [H] HUD &bull; [B] AMOLED &bull; [M] Radar &bull; [F] Fullscreen
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="src/default_assets.js?v=3.0"></script>
+  <script src="src/camera_engine.js?v=3.0"></script>
+  <script src="src/grading_engine.js?v=3.0"></script>
+  <script src="src/exporter.js?v=3.0"></script>
+  <script src="src/wallpaper.js?v=3.0"></script>
+</body>
+</html>

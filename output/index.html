@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <title>Deep Space AMOLED Wallpapers - Output Gallery</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #06080c; color: #f0f4f8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh; padding: 40px 20px; display: flex; flex-direction: column; align-items: center;
+    }
+    .container {
+      max-width: 1080px; width: 100%; display: flex; flex-direction: column; gap: 32px;
+    }
+    header {
+      text-align: center; display: flex; flex-direction: column; gap: 10px;
+    }
+    h1 {
+      font-size: 32px; font-weight: 800; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #00e5ff 0%, #ffffff 50%, #ff007f 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    p.subtitle {
+      font-size: 15px; color: #8b9bb4; max-width: 650px; margin: 0 auto; line-height: 1.5;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
+      border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase;
+      background: rgba(0, 229, 255, 0.1); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.25);
+      margin-bottom: 8px; width: fit-content; margin-left: auto; margin-right: auto;
+    }
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;
+    }
+    .card {
+      background: rgba(14, 18, 26, 0.75); border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;
+      backdrop-filter: blur(12px); transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+      text-decoration: none; color: inherit;
+    }
+    .card:hover {
+      transform: translateY(-4px); border-color: #00e5ff;
+      box-shadow: 0 12px 30px rgba(0, 229, 255, 0.2);
+    }
+    .card-thumb {
+      width: 100%; height: 200px; object-fit: cover; background: #000;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .card-body {
+      padding: 20px; display: flex; flex-direction: column; gap: 10px; flex: 1;
+    }
+    .card-title {
+      font-size: 18px; font-weight: 700; color: #fff; display: flex; justify-content: space-between; align-items: center;
+    }
+    .card-tag {
+      font-size: 11px; padding: 2px 8px; border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08); color: #8b9bb4; font-family: monospace;
+    }
+    .card-desc {
+      font-size: 13px; color: #8b9bb4; line-height: 1.4; flex: 1;
+    }
+    .btn-launch {
+      margin-top: 8px; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.3);
+      text-align: center; transition: all 0.2s;
+    }
+    .card:hover .btn-launch {
+      background: #00e5ff; color: #000; border-color: #00e5ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">60 FPS Cinematic Perfect Loops</div>
+      <h1>Deep Space AMOLED Wallpapers</h1>
+      <p class="subtitle">
+        NASA / ESA James Webb Space Telescope imagery graded for genuine OLED true black (RGB 0,0,0).
+        Select a wallpaper below configured for your specific screen aspect ratio.
+      </p>
+    </header>
+
+    <div class="grid">
+      <!-- 16:9 PC Screen 1080p -->
+      <a class="card" href="wallpaper_pc_1080p_16x9.html" target="_blank">
+        <img class="card-thumb" src="../images/previews/desktop_1080p_t45.jpg" alt="16:9 PC Screen 1080p">
+        <div class="card-body">
+          <div class="card-title">
+            <span>16:9 PC Desktop 1080p</span>
+            <span class="card-tag">1920x1080</span>
+          </div>
+          <p class="card-desc">
+            Tailored specifically for standard 16:9 desktop & laptop displays. Clean wallpaper mode with auto-hiding HUD, 60 FPS closed-loop camera motion.
+          </p>
+          <div class="btn-launch">Launch 1080p Wallpaper &rarr;</div>
+        </div>
+      </a>
+
+      <!-- 9:20 Phone Screen 2K -->
+      <a class="card" href="wallpaper_phone_2k_9x20.html" target="_blank">
+        <img class="card-thumb" src="../images/previews/phone_2k_9_20_t45.jpg" alt="9:20 Phone 2K">
+        <div class="card-body">
+          <div class="card-title">
+            <span>9:20 Phone Screen 2K</span>
+            <span class="card-tag">1440x3200</span>
+          </div>
+          <p class="card-desc">
+            Engineered for tall 9:20 / 19.5:9 flagship smartphones (Galaxy S24 Ultra, Pixel Pro). Tap screen for minimal controls, true OLED subpixel shutoff.
+          </p>
+          <div class="btn-launch">Launch 9:20 Phone Wallpaper &rarr;</div>
+        </div>
+      </a>
+
+      <!-- 16:9 4K UHD Desktop -->
+      <a class="card" href="wallpaper_desktop_4k_16x9.html" target="_blank">
+        <img class="card-thumb" src="../images/previews/desktop_1080p_t00.jpg" alt="16:9 4K Desktop">
+        <div class="card-body">
+          <div class="card-title">
+            <span>16:9 4K UHD Desktop</span>
+            <span class="card-tag">3840x2160</span>
+          </div>
+          <p class="card-desc">
+            High-DPI 4K rendering profile using the full 5K master texture. Pristine clarity for 4K / 5K monitors, TV screens, or Wallpaper Engine.
+          </p>
+          <div class="btn-launch">Launch 4K Wallpaper &rarr;</div>
+        </div>
+      </a>
+
+      <!-- Interactive Master Studio -->
+      <a class="card" href="../index.html" target="_blank">
+        <img class="card-thumb" src="../images/graded/carina_cosmic_cliffs_comparison.jpg" alt="Master Studio">
+        <div class="card-body">
+          <div class="card-title">
+            <span>Master Studio (All Presets)</span>
+            <span class="card-tag">Interactive</span>
+          </div>
+          <p class="card-desc">
+            Full studio with 11 device presets (iPhone, Galaxy, Ultrawide, MacBook), radar mini-map, duration slider, trajectory selector, and image switcher.
+          </p>
+          <div class="btn-launch">Launch Master Studio &rarr;</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
