@@ -111,6 +111,32 @@
           </button>
         </div>
 
+        <!-- Direct Upload & Direct Web URL (Prominently Placed at Top) -->
+        <section id="section-custom-sources" class="custom-sources-panel">
+          <div class="custom-card upload-dropzone-card" id="dropzone-box" title="Drag and drop or click to upload your high-resolution image">
+            <div class="dropzone-icon">📁</div>
+            <div class="dropzone-text">
+              <h4>Drop Any Astronomical Image Here</h4>
+              <p>Supports PNG, JPG, WebP, AVIF up to 8K. Drag and drop anywhere or browse.</p>
+            </div>
+            <input type="file" id="file-picker-input" accept="image/*" style="display: none;">
+            <button class="btn-browse" onclick="document.getElementById('file-picker-input').click()">
+              Browse Local File
+            </button>
+          </div>
+
+          <div class="custom-card url-input-card">
+            <div class="url-card-header">
+              <h4>🌐 Load Image from Direct URL</h4>
+              <p>Paste any direct link to an astronomical or high-res photo.</p>
+            </div>
+            <div class="url-input-row">
+              <input type="text" id="custom-url-field" placeholder="https://cdn.esawebb.org/.../image.jpg">
+              <button id="btn-fetch-custom-url" class="btn-primary">Load &rarr;</button>
+            </div>
+          </div>
+        </section>
+
         <!-- Quick Topics Suggestion Row -->
         <div class="quick-topics-row">
           <span>Popular Discoveries:</span>
@@ -164,32 +190,6 @@
         </div>
         <div class="celestial-grid" id="nasa-cards-container"></div>
       </section>
-
-      <!-- Section C: Custom Image Upload & URL Panel -->
-      <section id="section-custom-sources" class="custom-sources-panel">
-        <div class="custom-card upload-dropzone-card" id="dropzone-box">
-          <div class="dropzone-icon">📁</div>
-          <div class="dropzone-text">
-            <h4>Drop Any Astronomical Image Here</h4>
-            <p>Supports PNG, JPG, WebP, AVIF up to 8K. Drag and drop anywhere or click to browse.</p>
-          </div>
-          <input type="file" id="file-picker-input" accept="image/*" style="display: none;">
-          <button class="btn-browse" onclick="document.getElementById('file-picker-input').click()">
-            Browse Files
-          </button>
-        </div>
-
-        <div class="custom-card url-input-card">
-          <div class="url-card-header">
-            <h4>🌐 Load Image from Web URL</h4>
-            <p>Paste any direct link to an astronomical or high-res photo.</p>
-          </div>
-          <div class="url-input-row">
-            <input type="text" id="custom-url-field" placeholder="https://cdn.esawebb.org/.../image.jpg">
-            <button id="btn-fetch-custom-url" class="btn-primary">Load &rarr;</button>
-          </div>
-        </div>
-      </section>
     </main>
   </div>
 
@@ -201,11 +201,14 @@
 
     <!-- Video Recording Banner Overlay -->
     <div id="record-progress-banner">
-      <div id="record-progress-text" style="font-size: 13px; font-weight: 600; color: #00e5ff;">Recording 60 FPS Video...</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 12px;">
+        <div id="record-progress-text" style="font-size: 13px; font-weight: 600; color: #00e5ff;">Recording 60 FPS Video...</div>
+        <button id="btn-cancel-record" style="background: rgba(255, 60, 60, 0.2); border: 1px solid #ff4444; color: #ff6666; padding: 3px 8px; border-radius: 6px; font-size: 11px; cursor: pointer;">✕ Cancel</button>
+      </div>
       <div class="record-bar-track">
         <div id="record-bar-fill" class="record-bar-fill"></div>
       </div>
-      <div style="font-size: 11px; color: #8b9bb4;">Encoding frames directly in browser...</div>
+      <div style="font-size: 11px; color: #8b9bb4;">100% clean output &bull; Zero labels &bull; Pristine 60 FPS loop</div>
     </div>
 
     <!-- Viewport Stage -->
@@ -283,7 +286,10 @@
           <input type="range" id="slider-contrast" min="0.80" max="1.40" step="0.02" value="1.08">
         </div>
 
-        <button id="btn-bake-grade" class="btn-primary" style="padding: 10px;">✨ Apply & Bake AMOLED Grade</button>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-bake-grade" class="btn-primary" style="flex: 2; padding: 10px;">✨ Apply & Bake AMOLED Grade</button>
+          <button id="btn-undo-grade" class="btn-secondary" style="flex: 1; padding: 10px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 8px; cursor: pointer;" title="Revert back to original un-graded astronomical master">↩ Reset / Undo</button>
+        </div>
       </div>
     </div>
 
@@ -367,9 +373,10 @@
           <div style="display: flex; gap: 8px; align-items: center;">
             <label style="font-size: 12px; color: #fff;">Duration:</label>
             <select id="select-record-duration" style="flex: 1;">
-              <option value="10">10 Seconds (Quick Preview)</option>
-              <option value="30" selected>30 Seconds</option>
-              <option value="60">60 Seconds (Full Tour)</option>
+              <option value="180" selected>180s (3 Minutes - Full Loop)</option>
+              <option value="60">60s (1 Minute)</option>
+              <option value="30">30s (Social / Reel)</option>
+              <option value="10">10s (Quick Test)</option>
             </select>
           </div>
           <button id="btn-record-video" class="btn-accent" style="padding: 10px;">

@@ -870,6 +870,37 @@
   }
 
   /**
+   * Resets and undoes any baked AMOLED grade, reverting to the original un-graded raw master image
+   */
+  function resetAmoledGrade() {
+    if (!imageLoaded || !rawSourceImage) return;
+
+    activeRenderDrawable = rawSourceImage;
+    cameraEngine.setImageDimensions(rawSourceImage.naturalWidth, rawSourceImage.naturalHeight);
+    resizeViewport();
+    drawRadarBackground();
+    updateSplineEditorView();
+    runAutoGradeTelemetry();
+
+    const specs = calculateImageQualitySpecs(rawSourceImage, 0, isCanvasTainted);
+    activeImageSpecs = specs;
+    updateHudResolutionBadge(specs);
+
+    const elGraded = document.getElementById('stat-graded-black');
+    if (elGraded) elGraded.textContent = '--%';
+    const elSavings = document.getElementById('stat-oled-savings');
+    if (elSavings) elSavings.textContent = '--%';
+
+    const btnUndo = document.getElementById('btn-undo-grade');
+    if (btnUndo) {
+      const orig = btnUndo.textContent;
+      btnUndo.textContent = '✓ Reverted!';
+      setTimeout(() => { btnUndo.textContent = orig; }, 1200);
+    }
+    console.log('[Studio] AMOLED grade reverted to original master image.');
+  }
+
+  /**
    * Updates Spline Editor Canvas with draggable waypoints
    */
   function updateSplineEditorView() {
@@ -1027,17 +1058,34 @@
     if (btnAddWp) {
       btnAddWp.addEventListener('click', () => {
         const waypoints = cameraEngine.getWaypoints();
-        const current = waypoints[selectedWpIndex] || waypoints[0];
-        cameraEngine.addWaypoint({
-          x: current.x + 0.05,
-          y: current.y + 0.05,
+        const current = waypoints[selectedWpIndex] || waypoints[0] || { x: 0.5, y: 0.5, z: 2.0 };
+        const insertIdx = Math.min(waypoints.length, selectedWpIndex + 1);
+        const newIdx = cameraEngine.addWaypoint(insertIdx, {
+          x: Math.min(0.90, current.x + 0.04),
+          y: Math.min(0.90, current.y + 0.04),
           z: current.z,
           desc: `Waystop ${waypoints.length + 1}`
         });
-        selectedWpIndex = Math.min(waypoints.length, selectedWpIndex + 1);
+        selectedWpIndex = newIdx;
         updateSplineEditorView();
       });
     }
+
+    // Double-click on radar/editor canvas to add waypoint at clicked location
+    editorCanvas.addEventListener('dblclick', (e) => {
+      const pos = getMouseNormPos(e);
+      const waypoints = cameraEngine.getWaypoints();
+      const current = waypoints[selectedWpIndex] || { z: 2.0 };
+      const insertIdx = Math.min(waypoints.length, selectedWpIndex + 1);
+      const newIdx = cameraEngine.addWaypoint(insertIdx, {
+        x: pos.x,
+        y: pos.y,
+        z: current.z,
+        desc: `Waystop ${waypoints.length + 1}`
+      });
+      selectedWpIndex = newIdx;
+      updateSplineEditorView();
+    });
 
     // Remove waypoint button
     const btnRemoveWp = document.getElementById('btn-remove-wp');
@@ -1494,6 +1542,12 @@
       btnBake.addEventListener('click', applyInBrowserGrade);
     }
 
+    // AMOLED Grading: Reset / Undo button
+    const btnUndoGrade = document.getElementById('btn-undo-grade');
+    if (btnUndoGrade) {
+      btnUndoGrade.addEventListener('click', resetAmoledGrade);
+    }
+
     // Export: Standalone HTML Download
     const btnExportHtml = document.getElementById('btn-export-html');
     if (btnExportHtml) {
@@ -1564,11 +1618,25 @@
     }
 
     // Export: Video Recording (MP4 / WebM)
+    let abortRecording = false;
+
+    const btnCancelRecord = document.getElementById('btn-cancel-record');
+    if (btnCancelRecord) {
+      btnCancelRecord.addEventListener('click', () => {
+        abortRecording = true;
+        isRecording = false;
+        btnRecordVideo.textContent = '🎥 Record & Download Video';
+        recordBanner.classList.remove('active');
+        console.log('[Studio] User requested cancellation of video export.');
+      });
+    }
+
     const btnRecordVideo = document.getElementById('btn-record-video');
     if (btnRecordVideo) {
       btnRecordVideo.addEventListener('click', () => {
         if (isRecording || !imageLoaded) return;
-        const recordSec = parseInt(document.getElementById('select-record-duration').value, 10) || 30;
+        abortRecording = false;
+        const recordSec = parseInt(document.getElementById('select-record-duration').value, 10) || 180;
         const formatSelect = document.getElementById('select-record-format');
         const format = formatSelect ? formatSelect.value : 'mp4';
 
@@ -1589,6 +1657,7 @@
           loopDurationSec: loopDurationSec,
           speedMultiplier: speedMultiplier,
           startProgress: progress,
+          checkAbort: () => abortRecording,
           onProgress: (pct, elapsed, total) => {
             recordBarFill.style.width = `${pct}%`;
             recordText.textContent = `Rendering 60 FPS (${format.toUpperCase()}): ${Math.round(pct)}% (${elapsed.toFixed(1)}s / ${total}s)...`;
@@ -1603,7 +1672,11 @@
             isRecording = false;
             btnRecordVideo.textContent = '🎥 Record & Download Video';
             recordBanner.classList.remove('active');
-            alert('Video recording failed: ' + (err.message || err));
+            if (err && err.message && err.message.includes('cancelled')) {
+              console.log('[Studio] Recording cancelled.');
+            } else {
+              alert('Video recording failed: ' + (err.message || err));
+            }
           }
         });
       });

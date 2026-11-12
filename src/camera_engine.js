@@ -88,21 +88,33 @@ class CameraEngine {
     }
   }
 
-  addWaypoint(index, point) {
+  addWaypoint(indexOrPoint, point) {
+    let index;
+    let ptObj;
+    if (typeof indexOrPoint === 'object' && indexOrPoint !== null) {
+      ptObj = indexOrPoint;
+      index = (typeof point === 'number') ? point : this.getWaypoints().length;
+    } else {
+      index = (typeof indexOrPoint === 'number') ? indexOrPoint : this.getWaypoints().length;
+      ptObj = point || {};
+    }
+
     if (this.mode !== 'custom') {
       const active = this.mode === 'deep_dive' ? this.deepDiveWaypoints : this.odysseyWaypoints;
       this.customWaypoints = JSON.parse(JSON.stringify(active));
       this.mode = 'custom';
     }
-    const idx = (index === undefined || index < 0) ? this.customWaypoints.length : index;
+
+    const idx = Math.max(0, Math.min(this.customWaypoints.length, index));
     const pt = {
-      x: Math.max(0.10, Math.min(0.90, point.x || 0.5)),
-      y: Math.max(0.10, Math.min(0.90, point.y || 0.5)),
-      z: Math.max(1.10, Math.min(5.0, point.z || 2.0)),
-      desc: point.desc || `Waypoint ${this.customWaypoints.length + 1}`
+      x: Math.max(0.05, Math.min(0.95, ptObj.x !== undefined ? ptObj.x : 0.5)),
+      y: Math.max(0.05, Math.min(0.95, ptObj.y !== undefined ? ptObj.y : 0.5)),
+      z: Math.max(1.10, Math.min(5.0, ptObj.z !== undefined ? ptObj.z : 2.0)),
+      desc: ptObj.desc || `Waypoint ${this.customWaypoints.length + 1}`
     };
     this.customWaypoints.splice(idx, 0, pt);
     this.buildLUT();
+    return idx;
   }
 
   removeWaypoint(index) {
