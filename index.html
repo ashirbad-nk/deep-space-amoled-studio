@@ -523,6 +523,90 @@
     </div>
   </div>
 
+  <!-- ==================== IMAGE FETCH PROGRESS MODAL ==================== -->
+  <div id="modal-image-fetch" class="app-modal-backdrop hidden">
+    <div class="app-modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="modal-icon">🛰️</span>
+          <span>Fetching Celestial Vista</span>
+        </div>
+        <button id="btn-cancel-fetch" class="btn-cancel-modal" title="Cancel image download">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="fetch-vista-name" class="fetch-vista-name">Pillars of Creation (M16)</div>
+        <div id="fetch-source-url" class="fetch-source-url">Connecting to astronomical archive...</div>
+
+        <div class="record-bar-track fetch-bar-track">
+          <div id="fetch-bar-fill" class="record-bar-fill" style="width: 0%;"></div>
+        </div>
+
+        <div class="fetch-status-row">
+          <span id="fetch-status-text">Streaming full-resolution astronomical master...</span>
+          <span id="fetch-status-bytes">-- / --</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-fetch-action" class="btn-secondary" style="padding: 7px 16px; font-size: 12px; cursor: pointer;">
+          ✕ Cancel Download
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CORS RESOLUTION ASSISTANT MODAL ==================== -->
+  <div id="modal-cors-helper" class="app-modal-backdrop hidden">
+    <div class="app-modal-card cors-card">
+      <div class="modal-header">
+        <div class="modal-title" style="color: #ffb74d;">
+          <span class="modal-icon">🔒</span>
+          <span>Cross-Origin Security Restriction (CORS)</span>
+        </div>
+        <button id="btn-close-cors-modal" class="btn-cancel-modal" title="Dismiss modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="cors-explainer">
+          The external server (<code id="cors-host-name">nasa.gov</code>) restricts direct in-browser pixel manipulation.
+          Live 60 FPS wallpaper playback works normally, but <strong>AMOLED True-Black grading</strong> and <strong>Standalone HTML export</strong> require a local file copy.
+        </p>
+
+        <div class="cors-steps-grid">
+          <!-- Step 1: Save Image -->
+          <div class="cors-step-box">
+            <div class="step-header">
+              <span class="step-badge">Step 1</span>
+              <h4>Save Image to Device</h4>
+            </div>
+            <p>Save a copy of this astronomical image to your local Downloads folder.</p>
+            <button id="btn-cors-download-image" class="btn-primary" style="width: 100%; padding: 9px; font-size: 12px;">
+              ⬇️ Save Image File
+            </button>
+            <div id="cors-download-feedback" class="step-feedback" style="display: none;">
+              ✓ Saved! Now complete Step 2 &darr;
+            </div>
+          </div>
+
+          <!-- Step 2: Select Saved File -->
+          <div class="cors-step-box">
+            <div class="step-header">
+              <span class="step-badge">Step 2</span>
+              <h4>Load Saved File</h4>
+            </div>
+            <p>Select the saved file to unlock 100% untainted grading & instant auto-resume.</p>
+            <input type="file" id="input-cors-file" accept="image/*" style="display: none;">
+            <button id="btn-cors-pick-file" class="btn-accent" style="width: 100%; padding: 9px; font-size: 12px;">
+              📂 Select Downloaded File
+            </button>
+          </div>
+        </div>
+
+        <div class="cors-drop-hint">
+          💡 <em>Tip: You can also <strong>drag and drop</strong> the saved image directly into this window to resume immediately!</em>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="src/default_assets.js?v=3.0"></script>
   <script src="src/camera_engine.js?v=3.0"></script>

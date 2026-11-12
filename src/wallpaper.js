@@ -253,6 +253,10 @@
   let lastFpsUpdate = 0;
   let currentFps = 60;
 
+  // Active streaming fetch & CORS resolution state
+  let activeFetchAbortController = null;
+  let activePendingAction = null; // 'grade' | 'export_html'
+
   /**
    * Initializes application
    */
@@ -262,6 +266,7 @@
     setupSplineEditorInteraction();
     setupStudioUI();
     setupDragAndDrop();
+    setupModals();
     initPWA();
 
     // Preload default target in memory for instant readiness
@@ -331,11 +336,19 @@
       }
     }
 
-    loadImageSource(sourceUrl, fallbackUrl, item.title, () => {
-      if (autoSwitchToStudio) {
-        switchToScreen('studio');
-      }
-    });
+    if (sourceUrl && (sourceUrl.startsWith('http://') || sourceUrl.startsWith('https://'))) {
+      fetchAndLoadImage(sourceUrl, fallbackUrl, item.title, () => {
+        if (autoSwitchToStudio) {
+          switchToScreen('studio');
+        }
+      });
+    } else {
+      loadImageSource(sourceUrl, fallbackUrl, item.title, () => {
+        if (autoSwitchToStudio) {
+          switchToScreen('studio');
+        }
+      });
+    }
 
     // Update active highlight on discovery cards
     document.querySelectorAll('.celestial-card').forEach(card => {
@@ -371,6 +384,237 @@
       return false; // Untainted! Direct pixel reads and exports permitted.
     } catch (err) {
       return true; // Tainted by browser cross-origin policy
+    }
+  }
+
+  /**
+   * Fetches an external image with streaming progress and cancellation.
+   * Transparently attempts CORS proxy fallback so resulting Blob URI is 100% same-origin untainted!
+   */
+  async function fetchImageWithProgress(url, title = 'Celestial Vista', onProgress = null) {
+    if (activeFetchAbortController) {
+      try { activeFetchAbortController.abort(); } catch (e) {}
+    }
+    activeFetchAbortController = new AbortController();
+    const signal = activeFetchAbortController.signal;
+
+    async function streamResponse(res) {
+      const contentLength = res.headers.get('content-length');
+      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+      let loadedBytes = 0;
+
+      const reader = res.body.getReader();
+      const chunks = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loadedBytes += value.length;
+
+        if (onProgress) {
+          const pct = totalBytes > 0 ? Math.min(100, Math.round((loadedBytes / totalBytes) * 100)) : null;
+          onProgress(pct, loadedBytes, totalBytes);
+        }
+      }
+
+      const contentType = res.headers.get('content-type') || 'image/jpeg';
+      return new Blob(chunks, { type: contentType });
+    }
+
+    try {
+      const res = await fetch(url, { signal, mode: 'cors' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await streamResponse(res);
+    } catch (err) {
+      if (signal.aborted) throw err;
+      console.warn(`[Studio] Direct CORS fetch failed for ${url} (${err.message}). Trying proxy fallback...`);
+
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        try {
+          const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
+          const proxyRes = await fetch(proxyUrl, { signal });
+          if (!proxyRes.ok) throw new Error(`Proxy HTTP ${proxyRes.status}`);
+          return await streamResponse(proxyRes);
+        } catch (proxyErr) {
+          if (signal.aborted) throw proxyErr;
+          console.warn('[Studio] Proxy fetch failed:', proxyErr.message);
+        }
+      }
+      throw err;
+    } finally {
+      activeFetchAbortController = null;
+    }
+  }
+
+  /**
+   * Orchestrates high-res image fetching with dedicated progress modal and automatic fallback
+   */
+  async function fetchAndLoadImage(url, fallbackUrl = null, title = 'Custom Celestial Image', onComplete = null) {
+    if (!url || url.startsWith('data:') || url.startsWith('blob:')) {
+      return loadImageSource(url, fallbackUrl, title, onComplete);
+    }
+
+    const modal = document.getElementById('modal-image-fetch');
+    const elName = document.getElementById('fetch-vista-name');
+    const elSource = document.getElementById('fetch-source-url');
+    const elBar = document.getElementById('fetch-bar-fill');
+    const elStatus = document.getElementById('fetch-status-text');
+    const elBytes = document.getElementById('fetch-status-bytes');
+
+    if (modal) modal.classList.remove('hidden');
+    if (elName) elName.textContent = title;
+    try {
+      const parsedHost = new URL(url).hostname;
+      if (elSource) elSource.textContent = `Streaming master from ${parsedHost}...`;
+    } catch (e) {
+      if (elSource) elSource.textContent = 'Connecting to astronomical archive...';
+    }
+    if (elBar) elBar.style.width = '0%';
+    if (elStatus) elStatus.textContent = 'Connecting to astronomical archive...';
+    if (elBytes) elBytes.textContent = '-- / --';
+
+    try {
+      const blob = await fetchImageWithProgress(url, title, (pct, loaded, total) => {
+        if (pct !== null) {
+          if (elBar) elBar.style.width = `${pct}%`;
+          if (elStatus) elStatus.textContent = `Downloading master: ${pct}%...`;
+        } else {
+          if (elBar) elBar.style.width = `${Math.min(95, Math.round((loaded / (1024 * 1024 * 25)) * 100))}%`;
+          if (elStatus) elStatus.textContent = 'Streaming astronomical master...';
+        }
+        const mbLoaded = (loaded / (1024 * 1024)).toFixed(1);
+        const mbTotal = total > 0 ? (total / (1024 * 1024)).toFixed(1) + ' MB' : 'estimating...';
+        if (elBytes) elBytes.textContent = `${mbLoaded} MB / ${mbTotal}`;
+      });
+
+      const blobUrl = URL.createObjectURL(blob);
+      if (modal) modal.classList.add('hidden');
+      loadImageSource(blobUrl, fallbackUrl, title, onComplete);
+    } catch (err) {
+      if (modal) modal.classList.add('hidden');
+      if (err && (err.name === 'AbortError' || (err.message && err.message.includes('aborted')))) {
+        console.log('[Studio] Image download cancelled by user.');
+        return;
+      }
+      console.warn('[Studio] Streaming fetch failed, loading via direct 60 FPS playback mode:', err);
+      // Fallback: load directly via <img> so the user can still animate & enjoy at 60 FPS
+      loadImageSource(url, fallbackUrl, title, onComplete);
+    }
+  }
+
+  /**
+   * Displays the CORS Resolution Assistant Modal
+   */
+  function showCorsHelperModal(pendingAction = null) {
+    activePendingAction = pendingAction;
+    const modal = document.getElementById('modal-cors-helper');
+    const elHost = document.getElementById('cors-host-name');
+    const feedback = document.getElementById('cors-download-feedback');
+
+    if (feedback) feedback.style.display = 'none';
+
+    let host = 'external-archive';
+    try {
+      if (rawSourceImage && rawSourceImage.src && rawSourceImage.src.startsWith('http')) {
+        host = new URL(rawSourceImage.src).hostname;
+      }
+    } catch (e) {}
+
+    if (elHost) elHost.textContent = host;
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function hideCorsHelperModal() {
+    const modal = document.getElementById('modal-cors-helper');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  /**
+   * Unified local file loader: reads untainted data URI, switches to studio,
+   * and auto-resumes any pending user action (AMOLED grade bake or HTML export).
+   */
+  function handleLocalFileSelection(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      loadImageSource(evt.target.result, null, file.name, () => {
+        hideCorsHelperModal();
+        switchToScreen('studio');
+
+        // Check if there was an action waiting for an untainted image
+        if (activePendingAction === 'grade') {
+          activePendingAction = null;
+          console.log('[Studio] Auto-resuming AMOLED grade baking with untainted local copy...');
+          setTimeout(applyInBrowserGrade, 150);
+        } else if (activePendingAction === 'export_html') {
+          activePendingAction = null;
+          console.log('[Studio] Auto-resuming Standalone HTML export with untainted local copy...');
+          const btnExportHtml = document.getElementById('btn-export-html');
+          if (btnExportHtml) setTimeout(() => btnExportHtml.click(), 150);
+        }
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /**
+   * Sets up interactive modal handlers for image download progress and CORS resolution
+   */
+  function setupModals() {
+    // 1. Image Fetch Modal cancellation
+    const btnCancelFetch = document.getElementById('btn-cancel-fetch');
+    const btnCancelFetchAction = document.getElementById('btn-cancel-fetch-action');
+    function cancelFetch() {
+      if (activeFetchAbortController) {
+        try { activeFetchAbortController.abort(); } catch (e) {}
+        activeFetchAbortController = null;
+      }
+      const modal = document.getElementById('modal-image-fetch');
+      if (modal) modal.classList.add('hidden');
+    }
+    if (btnCancelFetch) btnCancelFetch.addEventListener('click', cancelFetch);
+    if (btnCancelFetchAction) btnCancelFetchAction.addEventListener('click', cancelFetch);
+
+    // 2. CORS Resolution Assistant Modal
+    const btnCloseCorsModal = document.getElementById('btn-close-cors-modal');
+    if (btnCloseCorsModal) btnCloseCorsModal.addEventListener('click', hideCorsHelperModal);
+
+    const btnCorsDownload = document.getElementById('btn-cors-download-image');
+    if (btnCorsDownload) {
+      btnCorsDownload.addEventListener('click', () => {
+        if (!rawSourceImage || !rawSourceImage.src) return;
+        const safeName = (activeImageTitle || 'celestial_vista').replace(/[^a-zA-Z0-9_-]/g, '_') + '.jpg';
+        const a = document.createElement('a');
+        a.href = rawSourceImage.src;
+        a.download = safeName;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        const feedback = document.getElementById('cors-download-feedback');
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.textContent = '✓ Download initiated! Look in your Downloads folder, then click Step 2 below ↓';
+        }
+      });
+    }
+
+    const btnCorsPick = document.getElementById('btn-cors-pick-file');
+    const inputCorsFile = document.getElementById('input-cors-file');
+    if (btnCorsPick && inputCorsFile) {
+      btnCorsPick.addEventListener('click', () => {
+        inputCorsFile.click();
+      });
+
+      inputCorsFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          handleLocalFileSelection(file);
+        }
+        inputCorsFile.value = '';
+      });
     }
   }
 
@@ -511,7 +755,7 @@
 
     if (isTainted) {
       tierBadge += ' • ⚠️ Protected Remote Source (CORS)';
-      evalText = 'Live 60 FPS playback active! External server restricts browser pixel reading. To grade AMOLED blacks or export standalone HTML, download and drop file into app.';
+      evalText = 'Live 60 FPS playback active! To grade AMOLED blacks or export HTML, click either feature to open the 2-step CORS Assistant and load a local copy.';
     }
 
     return {
@@ -865,23 +1109,7 @@
     const btnBake = document.getElementById('btn-bake-grade');
 
     if (isCanvasTainted) {
-      let host = 'External image server';
-      try {
-        if (rawSourceImage.src && rawSourceImage.src.startsWith('http')) {
-          host = new URL(rawSourceImage.src).hostname;
-        }
-      } catch (e) {}
-
-      const confirmDownload = confirm(
-        `🔒 Cross-Origin Security Restriction (CORS):\n\n` +
-        `The server (${host}) does not allow browser-based pixel extraction across origins.\n\n` +
-        `• Live 60 FPS Wallpaper Playback: ✅ Fully Functional!\n` +
-        `• AMOLED True-Black Grading: Requires a local file.\n\n` +
-        `Would you like to open/download this image in a new tab now?\n(Once saved, simply drag-and-drop the file into the app for 100% untainted grading!)`
-      );
-      if (confirmDownload && rawSourceImage.src) {
-        window.open(rawSourceImage.src, '_blank');
-      }
+      showCorsHelperModal('grade');
       if (btnBake) btnBake.textContent = '✨ Apply & Bake AMOLED Grade';
       return;
     }
@@ -1525,18 +1753,21 @@
               else if (large) fullUrl = large.href;
               else if (medium) fullUrl = medium.href;
 
-              loadImageSource(fullUrl, res.thumb, res.title, () => {
+              btn.textContent = 'Explore Vista →';
+              fetchAndLoadImage(fullUrl, res.thumb, res.title, () => {
                 switchToScreen('studio');
               });
             } catch (err) {
               console.warn('Asset manifest failed, loading thumb/preview:', err);
-              loadImageSource(res.thumb, null, res.title, () => {
+              btn.textContent = 'Explore Vista →';
+              fetchAndLoadImage(res.thumb, null, res.title, () => {
                 switchToScreen('studio');
               });
             }
           } else {
             // Direct Wikimedia high-res master
-            loadImageSource(res.fullUrl || res.thumb, res.thumb, res.title, () => {
+            btn.textContent = 'Explore Vista →';
+            fetchAndLoadImage(res.fullUrl || res.thumb, res.thumb, res.title, () => {
               switchToScreen('studio');
             });
           }
@@ -1551,15 +1782,10 @@
     if (filePicker) {
       filePicker.addEventListener('change', (e) => {
         const file = e.target.files[0];
-        if (file && file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onload = (evt) => {
-            loadImageSource(evt.target.result, null, file.name, () => {
-              switchToScreen('studio');
-            });
-          };
-          reader.readAsDataURL(file);
+        if (file) {
+          handleLocalFileSelection(file);
         }
+        filePicker.value = '';
       });
     }
 
@@ -1570,7 +1796,7 @@
       btnFetchUrl.addEventListener('click', () => {
         const url = customUrlField.value.trim();
         if (url) {
-          loadImageSource(url, null, 'Custom Astronomical URL', () => {
+          fetchAndLoadImage(url, null, 'Custom Astronomical URL', () => {
             switchToScreen('studio');
           });
         }
@@ -1658,23 +1884,7 @@
         if (!imageLoaded || !activeRenderDrawable) return;
 
         if (isCanvasTainted) {
-          let host = 'External image server';
-          try {
-            if (rawSourceImage.src && rawSourceImage.src.startsWith('http')) {
-              host = new URL(rawSourceImage.src).hostname;
-            }
-          } catch (e) {}
-
-          const confirmDownload = confirm(
-            `🔒 Cross-Origin Security Restriction (CORS):\n\n` +
-            `The server (${host}) does not allow browser-based packaging into standalone files across origins.\n\n` +
-            `• Live 60 FPS Wallpaper Playback: ✅ Fully Functional!\n` +
-            `• Standalone HTML Export: Requires a local file.\n\n` +
-            `Would you like to open/download this image now?\n(Once saved, simply drag-and-drop the file into the app to export your standalone HTML wallpaper!)`
-          );
-          if (confirmDownload && rawSourceImage.src) {
-            window.open(rawSourceImage.src, '_blank');
-          }
+          showCorsHelperModal('export_html');
           btnExportHtml.textContent = '💾 Download Standalone HTML';
           return;
         }
@@ -1937,13 +2147,7 @@
       if (dropZone) dropZone.classList.remove('active');
       const file = e.dataTransfer.files[0];
       if (file && file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          loadImageSource(evt.target.result, null, file.name, () => {
-            switchToScreen('studio');
-          });
-        };
-        reader.readAsDataURL(file);
+        handleLocalFileSelection(file);
       }
     });
   }
