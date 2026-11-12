@@ -428,6 +428,12 @@
       showImageSpecsToast(specs, title);
       updateHudResolutionBadge(specs);
 
+      const elVistaTitle = document.getElementById('hud-vista-title');
+      if (elVistaTitle) {
+        elVistaTitle.textContent = `🌌 ${title}`;
+        elVistaTitle.title = `Active Celestial Vista: ${title} (${specs.w}×${specs.h} px)`;
+      }
+
       btnEnterStudio.style.display = 'inline-flex';
       btnEnterStudio.textContent = `Launch: ${title.substring(0, 24)} →`;
 
@@ -706,7 +712,7 @@
       0, 0, vw, vh
     );
 
-    if (isInspectorActive) {
+    if (isInspectorActive && targetCanvas === canvas) {
       applyAmoledInspector(cam, vw, vh);
     }
   }
@@ -1737,7 +1743,7 @@
         const formatSelect = document.getElementById('select-record-format');
         const format = formatSelect ? formatSelect.value : 'mp4';
         const qualitySelect = document.getElementById('select-record-quality');
-        const quality = qualitySelect ? qualitySelect.value : '1080p';
+        const quality = qualitySelect ? qualitySelect.value : '1080p_fhd';
 
         isRecording = true;
         btnRecordVideo.textContent = '🔴 Recording...';

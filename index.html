@@ -232,7 +232,7 @@
     <!-- Drawer 1: AMOLED Color Grading -->
     <div class="studio-drawer" id="drawer-grade">
       <div class="drawer-header">
-        <div class="drawer-title">🖤 In-Browser AMOLED True-Black Grading</div>
+        <div class="drawer-title">🖤 Step 1: In-Browser AMOLED True-Black Grading</div>
         <button class="btn-close">&times;</button>
       </div>
       <div class="drawer-body">
@@ -296,7 +296,7 @@
     <!-- Drawer 2: Spline Editor & Randomization -->
     <div class="studio-drawer" id="drawer-spline">
       <div class="drawer-header">
-        <div class="drawer-title">✏️ Spline Trajectory Editor & Randomizer</div>
+        <div class="drawer-title">✏️ Step 2: Camera Trajectory & Waypoint Editor</div>
         <button class="btn-close">&times;</button>
       </div>
       <div class="drawer-body">
@@ -337,7 +337,7 @@
     <!-- Drawer 3: Export (HTML & Video) -->
     <div class="studio-drawer" id="drawer-export">
       <div class="drawer-header">
-        <div class="drawer-title">💾 Export Wallpapers & Video</div>
+        <div class="drawer-title">💾 Step 3: Export Clean Wallpapers & Video</div>
         <button class="btn-close">&times;</button>
       </div>
       <div class="drawer-body">
@@ -361,26 +361,46 @@
             2. Export MP4 / WebM 60 FPS Video Recording
           </div>
           <p style="font-size: 11px; color: #8b9bb4; line-height: 1.4;">
-            Records the camera loop directly from canvas at 60 FPS using browser hardware media encoders.
+            Hardware-accelerated 60 FPS video capture with memory flow control. Produces clean, pristine outputs free of any UI labels.
           </p>
           <div style="display: flex; gap: 8px; align-items: center;">
             <label style="font-size: 12px; color: #fff;">Format:</label>
             <select id="select-record-format" style="flex: 1;">
-              <option value="mp4" selected>🎬 MP4 Video (H.264 Universal)</option>
-              <option value="webm">🌐 WebM Video (VP9/VP8)</option>
+              <option value="mp4" selected>🎬 MP4 Video (H.264 Universal Hardware Encode)</option>
+              <option value="webm">🌐 WebM Video (VP9/VP8 Stream Capture)</option>
             </select>
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
             <label style="font-size: 12px; color: #fff;">Resolution:</label>
             <select id="select-record-quality" style="flex: 1;">
-              <option value="1080p" selected>1080p FHD (1920x1080 - Crisp & Stable)</option>
-              <option value="720p">720p HD (1280x720 - Ultra Fast & Low RAM)</option>
+              <optgroup label="🖥️ Monitors & Displays (Landscape 16:9 / 16:10 / 21:9)">
+                <option value="4k_uhd">4K UHD (3840×2160) &bull; 16:9 Ultra HD</option>
+                <option value="1440p_qhd">1440p QHD (2560×1440) &bull; 16:9 2K Gaming Display</option>
+                <option value="1080p_fhd" selected>1080p FHD (1920×1080) &bull; 16:9 Standard Monitor / TV (Default)</option>
+                <option value="720p_hd">720p HD (1280×720) &bull; 16:9 Fast / Low RAM</option>
+                <option value="macbook_16_10">MacBook Retina (2560×1600) &bull; 16:10 Apple / XPS</option>
+                <option value="ultrawide_fhd">Ultrawide 21:9 (2560×1080) &bull; WFHD Panoramic</option>
+                <option value="ultrawide_qhd">Ultrawide 21:9 QHD (3440×1440) &bull; UWQHD Curved</option>
+              </optgroup>
+              <optgroup label="📱 Smartphones & Mobile (Portrait 19.5:9 / 20:9 / 9:16)">
+                <option value="iphone_pro_max">iPhone Pro Max (1290×2796) &bull; 14/15/16 Pro Max</option>
+                <option value="iphone_pro">iPhone Pro / Standard (1178×2556) &bull; iPhone 14/15/16</option>
+                <option value="galaxy_ultra">Galaxy Ultra (1440×3120) &bull; S22/S23/S24 Ultra</option>
+                <option value="android_19_5_9">Modern Android FHD+ (1080×2340) &bull; 19.5:9 Flagship</option>
+                <option value="android_tall_20_9">Tall Android (1080×2400) &bull; 20:9 Moto / Sony / Galaxy A</option>
+                <option value="mobile_fhd_9_16">Classic Mobile 9:16 (1080×1920) &bull; Standard Portrait FHD</option>
+                <option value="mobile_hd_9_16">Fast Mobile 9:16 (720×1280) &bull; Lightweight Portrait 720p</option>
+              </optgroup>
+              <optgroup label="🖼️ Match Active Canvas">
+                <option value="current_canvas">Match Viewport (Exact Current Dimensions)</option>
+              </optgroup>
             </select>
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
             <label style="font-size: 12px; color: #fff;">Duration:</label>
             <select id="select-record-duration" style="flex: 1;">
               <option value="180" selected>180s (3 Minutes - Full Loop)</option>
+              <option value="120">120s (2 Minutes)</option>
               <option value="60">60s (1 Minute)</option>
               <option value="30">30s (Social / Reel)</option>
               <option value="10">10s (Quick Test)</option>
@@ -395,50 +415,71 @@
 
     <!-- ==================== MAIN GLASSMORPHIC HUD ==================== -->
     <div class="hud-layer">
-      <!-- Top Bar Controls -->
+      <!-- Top Bar Controls: Two-Tier Structure -->
       <header class="top-bar hud-interactive">
-        <div class="hud-card">
-          <!-- Back to Discovery Portal Button -->
-          <button id="btn-switch-discovery" class="btn-back-discovery" title="Explore and change celestial image source">
-            &larr; 🌌 Change Vista
-          </button>
+        <!-- Tier 1: Change Vista, Brand Title, Active Vista & Telemetry -->
+        <div class="hud-card top-bar-tier tier-primary">
+          <div class="tier-left">
+            <!-- Back to Discovery Portal Button -->
+            <button id="btn-switch-discovery" class="btn-back-discovery" title="Return to Discovery Portal to choose another astronomical vista">
+              &larr; 🌌 Change Vista
+            </button>
 
-          <div class="brand-badge">
-            <span class="dot"></span>
-            <span>AMOLED Studio</span>
+            <div class="brand-badge" title="AMOLED Deep Space Studio">
+              <span class="dot"></span>
+              <span class="brand-title">AMOLED Studio</span>
+            </div>
+
+            <div class="tier-separator"></div>
+
+            <!-- Active Celestial Vista Title -->
+            <div id="hud-vista-title" class="hud-vista-title" title="Active Celestial Vista">
+              🌌 Loading Celestial Vista...
+            </div>
           </div>
 
-          <!-- Studio Drawer Nav Tabs -->
-          <div class="studio-tabs">
-            <button class="tab-btn" data-drawer="drawer-grade" title="In-Browser AMOLED Color Grading">🖤 AMOLED</button>
-            <button class="tab-btn" data-drawer="drawer-spline" title="Interactive Spline Editor & Randomizer">✏️ Spline</button>
-            <button class="tab-btn" data-drawer="drawer-export" title="Export Standalone HTML or MP4 Video">💾 Export</button>
-          </div>
-        </div>
-
-        <div class="hud-card">
-          <div class="control-group">
-            <label for="select-preset">Device Preset:</label>
-            <select id="select-preset"></select>
-          </div>
-
-          <div class="control-group">
-            <label for="select-duration">Loop:</label>
-            <select id="select-duration">
-              <option value="30">30 Seconds</option>
-              <option value="60">60 Seconds</option>
-              <option value="120">2 Minutes</option>
-              <option value="180" selected>3 Minutes (10,800 frames)</option>
-            </select>
+          <div class="tier-right">
+            <div id="hud-res-badge" class="hud-res-badge" title="Click to view detailed image resolution specs">
+              📐 -- &times; -- (-- MP) &bull; --
+            </div>
+            <div id="fps-counter" class="fps-badge">60 FPS</div>
+            <button id="btn-hide-hud" title="Toggle HUD visibility (Hotkey: H)">🕶 Hide HUD (H)</button>
           </div>
         </div>
 
-        <div class="hud-card">
-          <div id="hud-res-badge" class="hud-res-badge" title="Click to view detailed image resolution specs">
-            📐 -- &times; -- (-- MP) &bull; --
+        <!-- Tier 2: 3-Step Guided Workflow & Loop Controls (Directly Below Tier 1) -->
+        <div class="hud-card top-bar-tier tier-workflow">
+          <div class="tier-left">
+            <span class="steps-label">STUDIO WORKFLOW:</span>
+            <div class="studio-tabs">
+              <button class="tab-btn step-tab" data-drawer="drawer-grade" title="Step 1: In-Browser AMOLED True-Black Color Grading">
+                <span class="step-badge">Step 1</span> 🖤 AMOLED Grade
+              </button>
+              <button class="tab-btn step-tab" data-drawer="drawer-spline" title="Step 2: Interactive Camera Trajectory & Waypoint Editor">
+                <span class="step-badge">Step 2</span> ✏️ Spline Path
+              </button>
+              <button class="tab-btn step-tab" data-drawer="drawer-export" title="Step 3: Export Standalone HTML or 60 FPS MP4 Video">
+                <span class="step-badge">Step 3</span> 💾 Export Wallpaper
+              </button>
+            </div>
           </div>
-          <div id="fps-counter" class="fps-badge">60 FPS</div>
-          <button id="btn-hide-hud" title="Toggle HUD visibility (Hotkey: H)">🕶 Hide HUD (H)</button>
+
+          <div class="tier-right">
+            <div class="control-group">
+              <label for="select-preset">Device Ratio:</label>
+              <select id="select-preset"></select>
+            </div>
+
+            <div class="control-group">
+              <label for="select-duration">Loop Length:</label>
+              <select id="select-duration">
+                <option value="30">30 Seconds</option>
+                <option value="60">60 Seconds (1 Min)</option>
+                <option value="120">120 Seconds (2 Min)</option>
+                <option value="180" selected>180 Seconds (3 Min Full Loop)</option>
+              </select>
+            </div>
+          </div>
         </div>
       </header>
 

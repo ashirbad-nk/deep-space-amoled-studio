@@ -72,13 +72,93 @@ html, body {
   pointer-events: auto;
 }
 
-/* Top bar controls */
+/* Top bar controls: Two-Tier Layout */
 .top-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.top-bar-tier {
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 6px 14px;
+}
+
+.top-bar-tier.tier-primary {
+  padding: 6px 14px;
+}
+
+.top-bar-tier.tier-workflow {
+  padding: 6px 14px;
+}
+
+.top-bar-tier .tier-left,
+.top-bar-tier .tier-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
+}
+
+.tier-separator {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 4px;
+}
+
+.hud-vista-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+}
+
+.steps-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #718096;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.step-tab {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.step-badge {
+  background: rgba(0, 229, 255, 0.15);
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.step-tab.active .step-badge {
+  background: var(--accent-cyan);
+  color: #000;
 }
 
 .hud-card {
@@ -209,7 +289,7 @@ button.active-magenta {
 /* Radar Mini-Map (Live Frustum Radar) */
 #radar-container {
   position: absolute;
-  top: 75px;
+  top: 116px;
   right: 20px;
   width: 210px;
   height: 120px;
@@ -251,10 +331,10 @@ button.active-magenta {
 /* Studio Drawer Modal Panels */
 .studio-drawer {
   position: absolute;
-  top: 75px;
+  top: 116px;
   left: 20px;
   width: min(440px, 92vw);
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 220px);
   background: rgba(10, 13, 20, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -1284,7 +1364,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .image-specs-toast {
   position: fixed;
-  top: 76px;
+  top: 116px;
   right: 24px;
   z-index: 500;
   background: rgba(10, 14, 24, 0.94);

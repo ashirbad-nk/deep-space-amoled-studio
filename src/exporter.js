@@ -198,6 +198,59 @@ class Exporter {
   }
 
   /**
+   * Resolves target video dimensions & bitrate based on preset quality or canvas size.
+   * Covers all mainstream smartphone portrait aspect ratios and monitor landscape aspect ratios.
+   */
+  static resolveVideoDimensions(qualityKey = '1080p_fhd', canvasWidth = 1920, canvasHeight = 1080) {
+    const MAP = {
+      // Landscape Displays & Monitors
+      '4k_uhd': { w: 3840, h: 2160, bitrate: 28000000, label: '4K UHD (3840×2160)' },
+      '1440p_qhd': { w: 2560, h: 1440, bitrate: 16000000, label: '1440p QHD (2560×1440)' },
+      '1440p': { w: 2560, h: 1440, bitrate: 16000000, label: '1440p QHD (2560×1440)' },
+      '1080p_fhd': { w: 1920, h: 1080, bitrate: 9000000, label: '1080p FHD (1920×1080)' },
+      '1080p': { w: 1920, h: 1080, bitrate: 9000000, label: '1080p FHD (1920×1080)' },
+      '720p_hd': { w: 1280, h: 720, bitrate: 4500000, label: '720p HD (1280×720)' },
+      '720p': { w: 1280, h: 720, bitrate: 4500000, label: '720p HD (1280×720)' },
+      'macbook_16_10': { w: 2560, h: 1600, bitrate: 16000000, label: 'MacBook Retina (2560×1600)' },
+      'ultrawide_fhd': { w: 2560, h: 1080, bitrate: 14000000, label: 'Ultrawide 21:9 (2560×1080)' },
+      'ultrawide_qhd': { w: 3440, h: 1440, bitrate: 22000000, label: 'Ultrawide QHD (3440×1440)' },
+
+      // Portrait Mobile Devices & Smartphones
+      'iphone_pro_max': { w: 1290, h: 2796, bitrate: 14000000, label: 'iPhone Pro Max (1290×2796)' },
+      'iphone_pro': { w: 1178, h: 2556, bitrate: 12000000, label: 'iPhone Pro (1178×2556)' },
+      'galaxy_ultra': { w: 1440, h: 3120, bitrate: 18000000, label: 'Galaxy Ultra (1440×3120)' },
+      'android_19_5_9': { w: 1080, h: 2340, bitrate: 10000000, label: 'Modern Android FHD+ (1080×2340)' },
+      'android_tall_20_9': { w: 1080, h: 2400, bitrate: 10000000, label: 'Tall Android 20:9 (1080×2400)' },
+      'mobile_fhd_9_16': { w: 1080, h: 1920, bitrate: 9000000, label: 'Classic Mobile 9:16 (1080×1920)' },
+      'mobile_hd_9_16': { w: 720, h: 1280, bitrate: 4500000, label: 'Fast Mobile 9:16 (720×1280)' }
+    };
+
+    if (MAP[qualityKey]) {
+      const entry = MAP[qualityKey];
+      return {
+        width: entry.w - (entry.w % 2),
+        height: entry.h - (entry.h % 2),
+        bitrate: entry.bitrate,
+        label: entry.label
+      };
+    }
+
+    // Default or 'current_canvas': match active canvas aspect ratio & dimensions
+    let w = canvasWidth || 1920;
+    let h = canvasHeight || 1080;
+    const encW = w - (w % 2);
+    const encH = h - (h % 2);
+    const totalPixels = encW * encH;
+    const estBitrate = Math.max(4000000, Math.min(28000000, Math.round(totalPixels * 4.5)));
+    return {
+      width: encW,
+      height: encH,
+      bitrate: estBitrate,
+      label: `${encW}×${encH} (Canvas)`
+    };
+  }
+
+  /**
    * Deterministic Frame-by-Frame WebCodecs H.264 MP4 Encoder with Mp4Muxer.
    * Guarantees zero dropped frames, zero stutter, and universal .mp4 output.
    */
@@ -208,7 +261,7 @@ class Exporter {
     loopDurationSec = 180,
     speedMultiplier = 1.0,
     startProgress = 0,
-    quality = '1080p',
+    quality = '1080p_fhd',
     checkAbort = null,
     onProgress = null,
     onFinish = null,
@@ -217,58 +270,70 @@ class Exporter {
     if (!canvas) throw new Error('No canvas provided for video export.');
 
     // 1. Calculate dimensions & target bitrate based on selected quality
-    let maxDim = 1920;
-    let targetBitrate = 8000000; // 8 Mbps high quality
-
-    if (quality === '720p') {
-      maxDim = 1280;
-      targetBitrate = 4000000; // 4 Mbps
-    } else if (quality === '1440p') {
-      maxDim = 2560;
-      targetBitrate = 14000000;
-    }
-
-    let w = canvas.width || 1920;
-    let h = canvas.height || 1080;
-    
-    if (Math.max(w, h) > maxDim) {
-      const scale = maxDim / Math.max(w, h);
-      w = Math.round(w * scale);
-      h = Math.round(h * scale);
-    }
-    const encW = w - (w % 2);
-    const encH = h - (h % 2);
+    const resolved = this.resolveVideoDimensions(quality, canvas.width, canvas.height);
+    let encW = resolved.width;
+    let encH = resolved.height;
+    let targetBitrate = resolved.bitrate;
 
     // 2. Probe supported H.264 / AVC codec profiles
     const candidateCodecs = [
-      'avc1.4d002a', // Main profile level 4.2
-      'avc1.64002a', // High profile level 4.2
-      'avc1.42001f', // Baseline profile level 3.1
+      'avc1.640033', // High Profile Level 5.1 (supports 4K UHD @ 60 FPS, 3840x2160, 1440x3120)
+      'avc1.640034', // High Profile Level 5.2
+      'avc1.64002a', // High Profile Level 4.2 (1080p @ 60 FPS)
+      'avc1.4d002a', // Main Profile Level 4.2
+      'avc1.42001f', // Baseline Profile Level 3.1
       'avc1.42e01f'  // Constrained Baseline
     ];
 
-    let chosenCodec = null;
-    for (const c of candidateCodecs) {
-      try {
-        const support = await VideoEncoder.isConfigSupported({
-          codec: c,
-          width: encW,
-          height: encH,
-          bitrate: targetBitrate,
-          framerate: 60
-        });
-        if (support && support.supported) {
-          chosenCodec = c;
-          break;
-        }
-      } catch (e) {}
+    async function probeCodecs(w, h, br) {
+      for (const c of candidateCodecs) {
+        try {
+          const support = await VideoEncoder.isConfigSupported({
+            codec: c,
+            width: w,
+            height: h,
+            bitrate: br,
+            framerate: 60
+          });
+          if (support && support.supported) {
+            return c;
+          }
+        } catch (e) {}
+      }
+      return null;
+    }
+
+    let chosenCodec = await probeCodecs(encW, encH, targetBitrate);
+
+    // If device GPU hardware encoder does not support high resolution (e.g. 4K or ultra-tall),
+    // step down gracefully to 1080p-tier while strictly preserving the chosen aspect ratio!
+    if (!chosenCodec && (encW > 1920 || encH > 1920)) {
+      console.warn(`[Exporter] Device encoder does not support ${encW}x${encH} at 60 FPS. Stepping down to 1080p-tier with identical aspect ratio...`);
+      const scale = 1920 / Math.max(encW, encH);
+      encW = Math.round(encW * scale);
+      encH = Math.round(encH * scale);
+      encW -= (encW % 2);
+      encH -= (encH % 2);
+      targetBitrate = Math.min(targetBitrate, 10000000);
+      chosenCodec = await probeCodecs(encW, encH, targetBitrate);
+    }
+
+    if (!chosenCodec) {
+      // Final attempt at standard 720p scaling
+      const scale = 1280 / Math.max(encW, encH);
+      encW = Math.round(encW * scale);
+      encH = Math.round(encH * scale);
+      encW -= (encW % 2);
+      encH -= (encH % 2);
+      targetBitrate = Math.min(targetBitrate, 5000000);
+      chosenCodec = await probeCodecs(encW, encH, targetBitrate);
     }
 
     if (!chosenCodec) {
       throw new Error('No supported H.264 codec found on this browser platform.');
     }
 
-    console.log(`[Exporter] Selected H.264 codec: ${chosenCodec} (${encW}x${encH} @ ${(targetBitrate/1000000).toFixed(1)} Mbps, 60 FPS)`);
+    console.log(`[Exporter] Selected H.264 codec: ${chosenCodec} (${encW}x${encH} @ ${(targetBitrate/1000000).toFixed(1)} Mbps, 60 FPS) [${resolved.label}]`);
 
     // 3. Initialize MP4 Muxer (in-memory fast start for instant playback)
     const muxer = new Mp4Muxer.Muxer({
@@ -357,7 +422,7 @@ class Exporter {
     muxer.finalize();
 
     const blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
-    const filename = `deep_space_amoled_loop_${durationSec}s.mp4`;
+    const filename = `deep_space_amoled_loop_${encW}x${encH}_${durationSec}s.mp4`;
     this.downloadBlob(blob, filename);
 
     if (onFinish) onFinish(blob, filename);
@@ -419,7 +484,7 @@ class Exporter {
     recorder.onstop = () => {
       console.log(`[Exporter] MediaRecorder finished. Total chunks: ${chunks.length}`);
       const blob = new Blob(chunks, { type: mimeType });
-      const filename = `deep_space_amoled_loop_${durationSec}s.${ext}`;
+      const filename = `deep_space_amoled_loop_${canvas.width}x${canvas.height}_${durationSec}s.${ext}`;
       this.downloadBlob(blob, filename);
       if (onFinish) onFinish(blob, filename);
     };
