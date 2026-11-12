@@ -208,6 +208,7 @@ class Exporter {
     loopDurationSec = 180,
     speedMultiplier = 1.0,
     startProgress = 0,
+    quality = '1080p',
     checkAbort = null,
     onProgress = null,
     onFinish = null,
@@ -215,12 +216,21 @@ class Exporter {
   }) {
     if (!canvas) throw new Error('No canvas provided for video export.');
 
-    // 1. Calculate dimensions (Must be even for H.264 hardware encoders)
+    // 1. Calculate dimensions & target bitrate based on selected quality
+    let maxDim = 1920;
+    let targetBitrate = 8000000; // 8 Mbps high quality
+
+    if (quality === '720p') {
+      maxDim = 1280;
+      targetBitrate = 4000000; // 4 Mbps
+    } else if (quality === '1440p') {
+      maxDim = 2560;
+      targetBitrate = 14000000;
+    }
+
     let w = canvas.width || 1920;
     let h = canvas.height || 1080;
     
-    // Cap dimensions to 1920x1080 for universal encoder compatibility across mobile & desktop
-    const maxDim = 1920;
     if (Math.max(w, h) > maxDim) {
       const scale = maxDim / Math.max(w, h);
       w = Math.round(w * scale);
@@ -244,7 +254,7 @@ class Exporter {
           codec: c,
           width: encW,
           height: encH,
-          bitrate: 16000000,
+          bitrate: targetBitrate,
           framerate: 60
         });
         if (support && support.supported) {
@@ -258,7 +268,7 @@ class Exporter {
       throw new Error('No supported H.264 codec found on this browser platform.');
     }
 
-    console.log(`[Exporter] Selected H.264 codec: ${chosenCodec} (${encW}x${encH} @ 60 FPS)`);
+    console.log(`[Exporter] Selected H.264 codec: ${chosenCodec} (${encW}x${encH} @ ${(targetBitrate/1000000).toFixed(1)} Mbps, 60 FPS)`);
 
     // 3. Initialize MP4 Muxer (in-memory fast start for instant playback)
     const muxer = new Mp4Muxer.Muxer({
@@ -285,26 +295,37 @@ class Exporter {
       codec: chosenCodec,
       width: encW,
       height: encH,
-      bitrate: 16000000, // 16 Mbps crystal clear
+      bitrate: targetBitrate,
       framerate: 60
     });
 
-    // 5. Dedicated offscreen canvas for crisp rendering at exact encoder dimensions
+    // 5. Dedicated offscreen canvas for crisp rendering at exact encoder dimensions (GPU hardware accelerated)
     const encCanvas = document.createElement('canvas');
     encCanvas.width = encW;
     encCanvas.height = encH;
-    const encCtx = encCanvas.getContext('2d', { willReadFrequently: true });
+    const encCtx = encCanvas.getContext('2d');
 
     const totalFrames = Math.round(durationSec * 60);
     const stepPerFrame = (1.0 / loopDurationSec) * speedMultiplier * (1.0 / 60.0);
 
-    // 6. Deterministic Render & Encode Loop
+    // 6. Deterministic Render & Encode Loop with Memory Backpressure Flow Control
     for (let i = 0; i < totalFrames; i++) {
       if (checkAbort && checkAbort()) {
         try { encoder.close(); } catch (e) {}
         throw new Error('Recording cancelled by user.');
       }
       if (encoderError) throw encoderError;
+
+      // CRITICAL BACKPRESSURE CONTROL:
+      // When encoding long loops (e.g. 180s = 10,800 frames), queueing frames faster than the hardware
+      // encoder can process exhausts all RAM and freezes the OS. We pause JS if queue exceeds 4 frames.
+      while (encoder.encodeQueueSize > 4) {
+        if (checkAbort && checkAbort()) {
+          try { encoder.close(); } catch (e) {}
+          throw new Error('Recording cancelled by user.');
+        }
+        await new Promise(resolve => setTimeout(resolve, 8));
+      }
 
       const frameProgress = (startProgress + i * stepPerFrame) % 1.0;
 
@@ -322,12 +343,12 @@ class Exporter {
       encoder.encode(videoFrame, { keyFrame: isKeyFrame });
       videoFrame.close();
 
-      // Yield every 6 frames to keep the browser responsive & update progress UI
-      if (i % 6 === 0 || i === totalFrames - 1) {
+      // Yield to browser event loop every 4 frames so UI, cancellation, and OS stay 100% responsive
+      if (i % 4 === 0 || i === totalFrames - 1) {
         const pct = Math.min(100, ((i + 1) / totalFrames) * 100);
         const curSec = ((i + 1) / 60);
         if (onProgress) onProgress(pct, curSec, durationSec);
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise(resolve => setTimeout(resolve, 2));
       }
     }
 

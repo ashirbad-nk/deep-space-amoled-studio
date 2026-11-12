@@ -662,15 +662,15 @@
       }
 
       // Advance animation timeline if active and on studio screen
-      if ((isPlaying || isRecording) && currentScreen === 'studio') {
+      if (isPlaying && !isRecording && currentScreen === 'studio') {
         const step = (deltaMs / 1000.0) / loopDurationSec * speedMultiplier;
         progress = (progress + step) % 1.0;
         if (progress < 0) progress += 1.0;
         updateScrubberUI();
       }
 
-      // Render frame if on studio screen
-      if (currentScreen === 'studio' && imageLoaded && cameraEngine && activeRenderDrawable) {
+      // Render frame if on studio screen (paused during active video export to prevent GPU thread contention)
+      if (currentScreen === 'studio' && imageLoaded && cameraEngine && activeRenderDrawable && !isRecording) {
         renderFrame();
         if (isRadarActive) {
           renderRadar();
@@ -1736,6 +1736,8 @@
         const recordSec = parseInt(document.getElementById('select-record-duration').value, 10) || 180;
         const formatSelect = document.getElementById('select-record-format');
         const format = formatSelect ? formatSelect.value : 'mp4';
+        const qualitySelect = document.getElementById('select-record-quality');
+        const quality = qualitySelect ? qualitySelect.value : '1080p';
 
         isRecording = true;
         btnRecordVideo.textContent = '🔴 Recording...';
@@ -1751,6 +1753,7 @@
           },
           durationSec: recordSec,
           format: format,
+          quality: quality,
           loopDurationSec: loopDurationSec,
           speedMultiplier: speedMultiplier,
           startProgress: progress,
