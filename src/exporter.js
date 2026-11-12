@@ -35,6 +35,13 @@ class Exporter {
     const customWaypointsJson = JSON.stringify(options.waypoints || []);
     const engineCode = options.engineCode;
 
+    if (!imageDataUri) {
+      throw new Error("Exporter Error: imageDataUri is required.");
+    }
+    if (imageDataUri.startsWith('blob:')) {
+      throw new Error("Exporter Error: Cannot embed session blob: URL into standalone HTML. A self-contained Data URI or reachable URL is required.");
+    }
+
     const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -86,7 +93,8 @@ class Exporter {
         resize();
         window.addEventListener('resize', resize);
 
-        activeImage.onload = () => {
+        function onImageReady() {
+          if (cameraEngine) return;
           cameraEngine = new CameraEngine(activeImage.naturalWidth, activeImage.naturalHeight, {
             mode: '${presetMode}',
             loopDurationSec: DURATION_SEC
@@ -95,8 +103,31 @@ class Exporter {
             cameraEngine.setCustomWaypoints(CUSTOM_WAYPOINTS);
           }
           requestAnimationFrame(loop);
+        }
+
+        activeImage.onload = onImageReady;
+        activeImage.onerror = (err) => {
+          console.error("Failed to load embedded wallpaper image:", err);
+          ctx.fillStyle = '#050508';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#ff5577';
+          ctx.font = 'bold 16px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('Wallpaper Error: Unable to load embedded image.', canvas.width / 2, canvas.height / 2 - 10);
+          ctx.font = '12px monospace';
+          ctx.fillStyle = '#888899';
+          ctx.fillText('The embedded image data may be corrupted or invalid.', canvas.width / 2, canvas.height / 2 + 15);
         };
+
+        if (EMBEDDED_IMAGE_DATA.startsWith('blob:')) {
+          activeImage.onerror(new Error('Session blob URLs cannot be used in standalone files.'));
+          return;
+        }
+
         activeImage.src = EMBEDDED_IMAGE_DATA;
+        if (activeImage.complete && activeImage.naturalWidth > 0) {
+          onImageReady();
+        }
 
         // Silent hotkeys: Spacebar to toggle play/pause, Double-click or F for Fullscreen
         window.addEventListener('keydown', (e) => {
@@ -422,7 +453,8 @@ class Exporter {
     muxer.finalize();
 
     const blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
-    const filename = `deep_space_amoled_loop_${encW}x${encH}_${durationSec}s.mp4`;
+    const defaultFilename = `deep_space_amoled_loop_${encW}x${encH}_${durationSec}s.mp4`;
+    const filename = options.filename ? (options.filename.endsWith('.mp4') ? options.filename : `${options.filename}.mp4`) : defaultFilename;
     this.downloadBlob(blob, filename);
 
     if (onFinish) onFinish(blob, filename);
@@ -439,7 +471,8 @@ class Exporter {
     checkAbort = null,
     onProgress = null,
     onFinish = null,
-    onError = null
+    onError = null,
+    filename = null
   }) {
     if (!canvas) return;
 
@@ -484,9 +517,10 @@ class Exporter {
     recorder.onstop = () => {
       console.log(`[Exporter] MediaRecorder finished. Total chunks: ${chunks.length}`);
       const blob = new Blob(chunks, { type: mimeType });
-      const filename = `deep_space_amoled_loop_${canvas.width}x${canvas.height}_${durationSec}s.${ext}`;
-      this.downloadBlob(blob, filename);
-      if (onFinish) onFinish(blob, filename);
+      const defaultFilename = `deep_space_amoled_loop_${canvas.width}x${canvas.height}_${durationSec}s.${ext}`;
+      const finalName = filename ? (filename.endsWith(`.${ext}`) ? filename : `${filename}.${ext}`) : defaultFilename;
+      this.downloadBlob(blob, finalName);
+      if (onFinish) onFinish(blob, finalName);
     };
 
     const progressTimer = setInterval(() => {

@@ -11,6 +11,8 @@
   
   <!-- PWA Manifest & App Icons -->
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -56,7 +58,7 @@
     <header class="discovery-header">
       <div class="brand-group">
         <div class="brand-badge-large">
-          <span class="pulsing-star"></span>
+          <img src="icons/icon-192.png" class="brand-app-logo" alt="AMOLED Deep Space Studio Logo">
           <div class="brand-titles">
             <h1>AMOLED Deep Space Studio</h1>
             <span class="brand-subtitle">60 FPS Seamless Cinematic Wallpaper Engine</span>
@@ -92,16 +94,19 @@
         <!-- Global Search Bar & Multi-Archive Selector -->
         <div class="search-box-container">
           <select id="select-archive-source" class="search-archive-select" title="Choose which space archive to search">
-            <option value="all">🌐 All Space Archives (NASA + Wikimedia + ESA)</option>
+            <option value="all">🌐 All Sources (Surveys + ESO + Chandra + NASA)</option>
+            <option value="eso">🏔️ ESO & VLT Masters (16–116 MP Ultra-HD)</option>
+            <option value="chandra">⚡ Chandra X-Ray (Pure OLED Black #000000)</option>
+            <option value="surveys">🔭 Deep Sky Surveys (DECam / unWISE Cutouts)</option>
             <option value="nasa">🚀 NASA Archives (Hubble, JWST, JPL)</option>
-            <option value="wikimedia">🌌 Wikimedia Astrophotography (ESO, VLT, ALMA)</option>
+            <option value="wikimedia">🌌 Wikimedia Astrophotography (Public Domain)</option>
           </select>
           <div class="search-input-wrapper">
             <span class="search-icon">🔍</span>
             <input 
               type="text" 
               id="global-cosmic-search" 
-              placeholder="Search cosmic objects (e.g. 'orion', 'pillars', 'galaxy', 'jupiter', 'black hole', 'andromeda')..."
+              placeholder="Search cosmic targets or coordinates (e.g. Orion, M31, NGC 3324, 83.82, -5.39)..."
               autocomplete="off"
             >
             <button id="btn-clear-search" class="btn-clear" style="display: none;">&times;</button>
@@ -150,15 +155,13 @@
 
         <!-- Category Filter Chips -->
         <div class="category-chips-scroll">
-          <button class="chip active" data-filter="all">🌟 All Curated (9)</button>
+          <button class="chip active" data-filter="all">🌟 All Curated (6)</button>
           <button class="chip" data-filter="cliffs">⛰️ Cosmic Cliffs</button>
           <button class="chip" data-filter="pillars">🏛️ Pillars of Creation</button>
           <button class="chip" data-filter="galaxies">🌀 Spiral Galaxies</button>
           <button class="chip" data-filter="webs">🕸️ Nebular Webs</button>
           <button class="chip" data-filter="rings">💍 Stellar Rings</button>
-          <button class="chip" data-filter="planets">🪐 Solar System</button>
-          <button class="chip" data-filter="void">🔭 Ancient Deep Void</button>
-          <button class="chip chip-nasa" data-filter="nasa-archive">🛸 NASA Public Archives</button>
+          <button class="chip chip-nasa" data-filter="nasa-archive">🌐 Global Space Archives</button>
           <button class="chip chip-upload" data-filter="custom-upload">📁 Upload / Custom</button>
         </div>
       </section>
@@ -167,7 +170,7 @@
       <section id="section-curated-grid" class="cards-section">
         <div class="section-heading-row">
           <h3 class="section-title">✨ Curated Astronomical Masterpieces (Instant Offline Loading)</h3>
-          <span class="section-count" id="curated-count">9 Objects</span>
+          <span class="section-count" id="curated-count">6 Objects</span>
         </div>
 
         <div class="celestial-grid" id="curated-cards-container">
@@ -175,18 +178,18 @@
         </div>
       </section>
 
-      <!-- Section B: NASA Public Image Archive Search Results -->
+      <!-- Section B: Astronomical Archive Search Results -->
       <section id="section-nasa-results" class="cards-section" style="display: none;">
         <div class="section-heading-row">
           <div class="nasa-heading-group">
-            <h3 class="section-title">🛸 NASA Deep Space Archive Results</h3>
-            <span class="nasa-live-badge">Live API</span>
+            <h3 class="section-title" id="archive-results-title">🛸 NASA Deep Space Archive Results</h3>
+            <span class="nasa-live-badge" id="archive-results-badge">Live API</span>
           </div>
           <span class="section-count" id="nasa-results-count">Searching...</span>
         </div>
         <div id="nasa-loading-spinner" class="nasa-spinner-box" style="display: none;">
           <div class="cosmic-spinner"></div>
-          <span>Querying NASA Image and Video Library...</span>
+          <span id="nasa-loading-text">Querying NASA Image and Video Library...</span>
         </div>
         <div class="celestial-grid" id="nasa-cards-container"></div>
       </section>
@@ -229,10 +232,10 @@
 
     <!-- ==================== STUDIO DRAWER PANELS ==================== -->
 
-    <!-- Drawer 1: AMOLED Color Grading -->
+    <!-- Drawer 1: AMOLED Color Grading & Visual Tuning -->
     <div class="studio-drawer" id="drawer-grade">
       <div class="drawer-header">
-        <div class="drawer-title">🖤 Step 1: In-Browser AMOLED True-Black Grading</div>
+        <div class="drawer-title">🖤 Step 1: Color Grading & AMOLED Tuning</div>
         <button class="btn-close">&times;</button>
       </div>
       <div class="drawer-body">
@@ -249,6 +252,11 @@
             <span>OLED Battery Power Saved:</span>
             <span id="stat-oled-savings" style="color: var(--accent-cyan); font-family: monospace;">--%</span>
           </div>
+        </div>
+
+        <!-- Group A: AMOLED True-Black Controls -->
+        <div style="font-size: 11px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">
+          🌌 AMOLED True-Black Controls
         </div>
 
         <div class="field-row">
@@ -278,17 +286,64 @@
           <span style="font-size: 10px; color: var(--text-muted);">Protects pinpoint background stars from being crushed to black.</span>
         </div>
 
-        <div class="field-row">
-          <div class="field-label">
-            <span>Nebular Dynamic Contrast:</span>
-            <span id="val-contrast" class="val">1.08x</span>
-          </div>
-          <input type="range" id="slider-contrast" min="0.80" max="1.40" step="0.02" value="1.08">
+        <!-- Dedicated Buttons for AMOLED Grading -->
+        <div style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin: 6px 0 12px 0;">
+          <button id="btn-apply-amoled" class="btn-primary" style="flex: 2; padding: 9px; min-width: 0; font-size: 12px;">🖤 Apply AMOLED Grade</button>
+          <button id="btn-reset-amoled" class="btn-secondary" style="flex: 1; padding: 9px; min-width: 0; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 8px; cursor: pointer; font-size: 11px;" title="Reset AMOLED black crushing to defaults">↩ Reset</button>
         </div>
 
-        <div style="display: flex; gap: 8px;">
-          <button id="btn-bake-grade" class="btn-primary" style="flex: 2; padding: 10px;">✨ Apply & Bake AMOLED Grade</button>
-          <button id="btn-undo-grade" class="btn-secondary" style="flex: 1; padding: 10px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 8px; cursor: pointer;" title="Revert back to original un-graded astronomical master">↩ Reset / Undo</button>
+        <!-- Group B: Visual Enhancements (Exposure, Contrast, Saturation, Sharpness) -->
+        <div style="font-size: 11px; font-weight: 700; color: var(--accent-magenta); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;">
+          ✨ Visual Enhancements
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">
+            <span>Exposure (EV):</span>
+            <span id="val-exposure" class="val">+0.00 EV</span>
+          </div>
+          <input type="range" id="slider-exposure" min="-2.00" max="2.00" step="0.05" value="0.00">
+          <span style="font-size: 10px; color: var(--text-muted);">Increases overall luminosity and deep cosmic exposure.</span>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">
+            <span>Dynamic Contrast:</span>
+            <span id="val-contrast" class="val">1.08x</span>
+          </div>
+          <input type="range" id="slider-contrast" min="0.50" max="2.00" step="0.02" value="1.08">
+          <span style="font-size: 10px; color: var(--text-muted);">Expands dynamic range between interstellar dust and deep void.</span>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">
+            <span>Color Saturation:</span>
+            <span id="val-saturation" class="val">1.00x</span>
+          </div>
+          <input type="range" id="slider-saturation" min="0.00" max="2.00" step="0.05" value="1.00">
+          <span style="font-size: 10px; color: var(--text-muted);">Vibrancy of nebular gas emissions (H-alpha, O-III, sulfur).</span>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">
+            <span>Detail Sharpness:</span>
+            <span id="val-sharpness" class="val">0%</span>
+          </div>
+          <input type="range" id="slider-sharpness" min="0" max="100" step="5" value="0">
+          <span style="font-size: 10px; color: var(--text-muted);">Laplacian edge enhancement for crisp stars and dust filaments.</span>
+        </div>
+
+        <!-- Dedicated Buttons for Image Adjustments -->
+        <div style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin: 6px 0 10px 0;">
+          <button id="btn-apply-adjustments" class="btn-accent" style="flex: 2; padding: 9px; min-width: 0; font-size: 12px;">🎨 Apply Image Adjustments</button>
+          <button id="btn-reset-adjustments" class="btn-secondary" style="flex: 1; padding: 9px; min-width: 0; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 8px; cursor: pointer; font-size: 11px;" title="Reset image adjustments to defaults">↩ Reset</button>
+        </div>
+
+        <!-- Master Revert to Original Unaltered Master -->
+        <div style="display: flex; width: 100%; box-sizing: border-box; margin-top: 2px;">
+          <button id="btn-undo-grade" class="btn-secondary" style="width: 100%; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #8b9bb4; border-radius: 8px; cursor: pointer; font-size: 11px;" title="Revert all changes and restore original raw master image">
+            🔄 Revert All to Original Master
+          </button>
         </div>
       </div>
     </div>
@@ -350,6 +405,19 @@
             Compiles active graded image (WebP data URI), custom spline waypoints, and 60 FPS engine into a single file. Zero backend server required.
             Works instantly in <strong>Hidamari (Linux Flatpak)</strong>, <strong>Wallpaper Engine</strong>, <strong>Lively Wallpaper</strong>, or mobile.
           </p>
+          <div class="drawer-control-row" style="margin: 4px 0 8px 0;">
+            <label>Resolution:</label>
+            <select id="select-export-html-res" style="padding: 7px; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; font-size: 11px;">
+              <option value="5k" selected>⚡ 5K Ultra HD (~3.5 MB Embedded WebP • Recommended)</option>
+              <option value="4k">🖥️ 4K UHD (~2.2 MB Embedded WebP • High Performance)</option>
+              <option value="1080p">📱 1080p FHD (~950 KB Embedded WebP • Lightweight)</option>
+              <option value="original">💎 Full Master (Max 5K / 8K • 100% Embedded)</option>
+            </select>
+          </div>
+          <div class="drawer-control-row" style="margin: 0 0 8px 0;">
+            <label>Filename:</label>
+            <input type="text" id="input-export-html-filename" placeholder="Auto: vista_mode_res.html" style="padding: 7px; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; font-size: 11px; font-family: monospace;" title="Custom filename (leave blank for smart automatic naming)">
+          </div>
           <button id="btn-export-html" class="btn-primary" style="padding: 10px;">
             💾 Download Standalone HTML
           </button>
@@ -363,16 +431,16 @@
           <p style="font-size: 11px; color: #8b9bb4; line-height: 1.4;">
             Hardware-accelerated 60 FPS video capture with memory flow control. Produces clean, pristine outputs free of any UI labels.
           </p>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <label style="font-size: 12px; color: #fff;">Format:</label>
-            <select id="select-record-format" style="flex: 1;">
+          <div class="drawer-control-row">
+            <label>Format:</label>
+            <select id="select-record-format">
               <option value="mp4" selected>🎬 MP4 Video (H.264 Universal Hardware Encode)</option>
               <option value="webm">🌐 WebM Video (VP9/VP8 Stream Capture)</option>
             </select>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <label style="font-size: 12px; color: #fff;">Resolution:</label>
-            <select id="select-record-quality" style="flex: 1;">
+          <div class="drawer-control-row">
+            <label>Resolution:</label>
+            <select id="select-record-quality">
               <optgroup label="🖥️ Monitors & Displays (Landscape 16:9 / 16:10 / 21:9)">
                 <option value="4k_uhd">4K UHD (3840×2160) &bull; 16:9 Ultra HD</option>
                 <option value="1440p_qhd">1440p QHD (2560×1440) &bull; 16:9 2K Gaming Display</option>
@@ -396,15 +464,19 @@
               </optgroup>
             </select>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <label style="font-size: 12px; color: #fff;">Duration:</label>
-            <select id="select-record-duration" style="flex: 1;">
+          <div class="drawer-control-row">
+            <label>Duration:</label>
+            <select id="select-record-duration">
               <option value="180" selected>180s (3 Minutes - Full Loop)</option>
               <option value="120">120s (2 Minutes)</option>
               <option value="60">60s (1 Minute)</option>
               <option value="30">30s (Social / Reel)</option>
               <option value="10">10s (Quick Test)</option>
             </select>
+          </div>
+          <div class="drawer-control-row" style="margin: 4px 0 8px 0;">
+            <label>Filename:</label>
+            <input type="text" id="input-export-video-filename" placeholder="Auto: vista_mode_res.mp4" style="padding: 7px; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; font-size: 11px; font-family: monospace;" title="Custom filename (leave blank for smart automatic naming)">
           </div>
           <button id="btn-record-video" class="btn-accent" style="padding: 10px;">
             🎥 Record & Download Video
@@ -426,7 +498,7 @@
             </button>
 
             <div class="brand-badge" title="AMOLED Deep Space Studio">
-              <span class="dot"></span>
+              <img src="icons/icon-192.png" class="brand-app-logo-small" alt="Logo">
               <span class="brand-title">AMOLED Studio</span>
             </div>
 

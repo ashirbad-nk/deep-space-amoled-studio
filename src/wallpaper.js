@@ -3,7 +3,7 @@
  *
  * 100% Client-Side Static Webapp & PWA:
  * 1. Screen 1: Discovery & Multi-Archive Sourcing Hub:
- *    - Curated 4K/5K Masterpieces (Carina, Pillars, Tarantula, M74, Jupiter, Stephan's Quintet, Southern Ring, Webb Deep Field, Cartwheel).
+ *    - Curated 4K/5K Masterpieces (Carina, Pillars, Phantom Spiral, Tarantula, Southern Ring, Cartwheel).
  *    - Multi-Archive Search: NASA Image & Video Library + Wikimedia Commons Astronomical Archive (ESO, VLT, ALMA, Hubble, JWST).
  *    - Pre-download image dimension badges (Resolution, MP, Tier).
  *    - CORS-safe Blob URL loader (Zero CORS errors, Zero tainted canvases).
@@ -97,36 +97,6 @@
       width: 1200,
       height: 1200
     },
-    'jupiter': {
-      title: "Jupiter's Polar Auroras & Rings",
-      subtitle: 'Solar System Giant • JWST NIRCam Infrared',
-      desc: 'Ghostly shimmering auroras dancing over Jupiter’s poles with faint dust rings against the deep black void.',
-      category: 'planets',
-      thumb: 'images/thumbnails/jupiter.webp',
-      src: (typeof window !== 'undefined' && window.DEFAULT_ASSETS && window.DEFAULT_ASSETS.jupiter) ? window.DEFAULT_ASSETS.jupiter : 'images/graded/jupiter_master.webp',
-      fallback: 'images/graded/jupiter_master.webp',
-      rawUrl: 'https://cdn.esawebb.org/archives/images/large/weic2214a.jpg',
-      resBadge: 'Ultra Master',
-      blackLevel: '🖤 ~45% OLED Black',
-      telescope: 'JWST NIRCam',
-      width: 1059,
-      height: 1059
-    },
-    'quintet': {
-      title: "Stephan's Cosmic Dance",
-      subtitle: 'HCG 92 Galaxy Group • JWST NIRCam + MIRI',
-      desc: 'Five interacting galaxies locked in a gravitational ballet with sweeping shockwave tails of stardust.',
-      category: 'galaxies',
-      thumb: 'images/thumbnails/quintet.webp',
-      src: (typeof window !== 'undefined' && window.DEFAULT_ASSETS && window.DEFAULT_ASSETS.quintet) ? window.DEFAULT_ASSETS.quintet : 'images/graded/quintet_master.webp',
-      fallback: 'images/graded/quintet_master.webp',
-      rawUrl: 'https://cdn.esawebb.org/archives/images/large/weic2207a.jpg',
-      resBadge: '2K Ultra Master',
-      blackLevel: '🖤 ~35% OLED Black',
-      telescope: 'JWST NIRCam',
-      width: 2560,
-      height: 1188
-    },
     'southern_ring': {
       title: 'Southern Ring of Fire',
       subtitle: 'Eight-Burst Planetary Nebula (NGC 3132)',
@@ -141,21 +111,6 @@
       telescope: 'JWST NIRCam',
       width: 2560,
       height: 2454
-    },
-    'deep_field': {
-      title: "Webb's Ancient Deep Field",
-      subtitle: 'Galaxy Cluster SMACS 0723 • Gravitational Lens',
-      desc: 'Thousands of ancient galaxies scattered across 13 billion years of cosmic time, warped by gravitational lensing.',
-      category: 'void',
-      thumb: 'images/thumbnails/deep_field.webp',
-      src: (typeof window !== 'undefined' && window.DEFAULT_ASSETS && window.DEFAULT_ASSETS.deep_field) ? window.DEFAULT_ASSETS.deep_field : 'images/graded/deep_field_master.webp',
-      fallback: 'images/graded/deep_field_master.webp',
-      rawUrl: 'https://cdn.esawebb.org/archives/images/large/weic2209a.jpg',
-      resBadge: '2K Ultra Master',
-      blackLevel: '🖤 ~52% OLED Black',
-      telescope: 'JWST NIRCam',
-      width: 2509,
-      height: 2560
     },
     'cartwheel': {
       title: 'The Cartwheel Cosmic Collision',
@@ -187,6 +142,7 @@
   let activeRenderDrawable = null; // Can be Image or Canvas
   let imageLoaded = false;
   let isCanvasTainted = false; // Set to true if loaded without CORS (e.g. NASA CDN)
+  let isAmoledGraded = false; // Set to true when AMOLED true-black grade is baked into texture
   let currentPresetKey = 'fullscreen';
   let loopDurationSec = 180;
   let speedMultiplier = 1.0;
@@ -316,24 +272,30 @@
    */
   function loadImageFromCatalog(key, autoSwitchToStudio = true) {
     activeCatalogKey = key;
+    isAmoledGraded = false;
     const item = CATALOG[key] || CATALOG['carina'];
     activeImageTitle = item.title;
 
-    // Use pre-bundled Base64 Data URI if available to guarantee untainted canvas on file:// protocol
+    // Intelligent lazy-loading:
+    // On HTTP/HTTPS, load local WebP files on-demand (leveraging service worker cache)
+    // On file:// protocol, use pre-bundled Base64 Data URI to avoid canvas tainting
     let sourceUrl = item.src;
     let fallbackUrl = item.fallback;
 
-    if (typeof window !== 'undefined' && window.DEFAULT_ASSETS) {
+    const isHttp = (typeof window !== 'undefined' && (window.location.protocol === 'http:' || window.location.protocol === 'https:' || window.location.hostname === 'localhost'));
+
+    if (!isHttp && typeof window !== 'undefined' && window.DEFAULT_ASSETS) {
       if (window.DEFAULT_ASSETS[key]) {
         sourceUrl = window.DEFAULT_ASSETS[key];
       }
       if (window.DEFAULT_ASSETS.thumbnails && window.DEFAULT_ASSETS.thumbnails[key]) {
         fallbackUrl = window.DEFAULT_ASSETS.thumbnails[key];
-        // If on file:// protocol without network access for remote sources, default to embedded untainted fallback
-        if (window.location.protocol === 'file:' && !window.DEFAULT_ASSETS[key] && !navigator.onLine) {
+        if (!window.DEFAULT_ASSETS[key] && !navigator.onLine) {
           sourceUrl = window.DEFAULT_ASSETS.thumbnails[key];
         }
       }
+    } else if (isHttp) {
+      sourceUrl = item.src || item.fallback;
     }
 
     if (sourceUrl && (sourceUrl.startsWith('http://') || sourceUrl.startsWith('https://'))) {
@@ -428,13 +390,15 @@
       return await streamResponse(res);
     } catch (err) {
       if (signal.aborted) throw err;
-      console.warn(`[Studio] Direct CORS fetch failed for ${url} (${err.message}). Trying proxy fallback...`);
+      console.warn(`[Studio] Direct CORS fetch failed for ${url} (${err.message}). Trying image proxy...`);
 
       if (url.startsWith('http://') || url.startsWith('https://')) {
         try {
-          const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
+          const elStatus = document.getElementById('fetch-status-text');
+          if (elStatus) elStatus.textContent = 'Archive requires proxy mirror... Connecting...';
+          const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=jpg`;
           const proxyRes = await fetch(proxyUrl, { signal });
-          if (!proxyRes.ok) throw new Error(`Proxy HTTP ${proxyRes.status}`);
+          if (!proxyRes.ok) throw new Error(`Weserv HTTP ${proxyRes.status}`);
           return await streamResponse(proxyRes);
         } catch (proxyErr) {
           if (signal.aborted) throw proxyErr;
@@ -448,11 +412,13 @@
   }
 
   /**
-   * Orchestrates high-res image fetching with dedicated progress modal and automatic fallback
+   * Orchestrates high-res image fetching with dedicated progress modal and continuous fallback.
+   * Fixes modal premature close bug: The modal stays OPEN with active status until the image
+   * is completely loaded into memory and the 60 FPS studio screen is ready!
    */
   async function fetchAndLoadImage(url, fallbackUrl = null, title = 'Custom Celestial Image', onComplete = null) {
     if (!url || url.startsWith('data:') || url.startsWith('blob:')) {
-      return loadImageSource(url, fallbackUrl, title, onComplete);
+      return loadImageSource(url, fallbackUrl, title, onComplete, false);
     }
 
     const modal = document.getElementById('modal-image-fetch');
@@ -470,36 +436,51 @@
     } catch (e) {
       if (elSource) elSource.textContent = 'Connecting to astronomical archive...';
     }
-    if (elBar) elBar.style.width = '0%';
+    if (elBar) {
+      elBar.classList.remove('indeterminate');
+      elBar.style.width = '0%';
+    }
     if (elStatus) elStatus.textContent = 'Connecting to astronomical archive...';
     if (elBytes) elBytes.textContent = '-- / --';
 
     try {
       const blob = await fetchImageWithProgress(url, title, (pct, loaded, total) => {
-        if (pct !== null) {
-          if (elBar) elBar.style.width = `${pct}%`;
-          if (elStatus) elStatus.textContent = `Downloading master: ${pct}%...`;
-        } else {
-          if (elBar) elBar.style.width = `${Math.min(95, Math.round((loaded / (1024 * 1024 * 25)) * 100))}%`;
-          if (elStatus) elStatus.textContent = 'Streaming astronomical master...';
-        }
         const mbLoaded = (loaded / (1024 * 1024)).toFixed(1);
-        const mbTotal = total > 0 ? (total / (1024 * 1024)).toFixed(1) + ' MB' : 'estimating...';
-        if (elBytes) elBytes.textContent = `${mbLoaded} MB / ${mbTotal}`;
+        if (pct !== null) {
+          if (elBar) {
+            elBar.classList.remove('indeterminate');
+            elBar.style.width = `${pct}%`;
+          }
+          if (elStatus) elStatus.textContent = `Downloading master: ${pct}%...`;
+          const mbTotal = total > 0 ? (total / (1024 * 1024)).toFixed(1) + ' MB' : '';
+          if (elBytes) elBytes.textContent = `${mbLoaded} MB / ${mbTotal}`;
+        } else {
+          if (elBar) {
+            elBar.classList.add('indeterminate');
+          }
+          if (elStatus) elStatus.textContent = `Streaming master (${mbLoaded} MB downloaded)...`;
+          if (elBytes) elBytes.textContent = `${mbLoaded} MB / streaming...`;
+        }
       });
 
       const blobUrl = URL.createObjectURL(blob);
-      if (modal) modal.classList.add('hidden');
-      loadImageSource(blobUrl, fallbackUrl, title, onComplete);
+      // NOTE: Do NOT hide modal here. loadImageSource's onload hides it cleanly when rendering is primed!
+      loadImageSource(blobUrl, fallbackUrl, title, onComplete, false);
     } catch (err) {
-      if (modal) modal.classList.add('hidden');
       if (err && (err.name === 'AbortError' || (err.message && err.message.includes('aborted')))) {
         console.log('[Studio] Image download cancelled by user.');
+        if (modal) modal.classList.add('hidden');
         return;
       }
-      console.warn('[Studio] Streaming fetch failed, loading via direct 60 FPS playback mode:', err);
-      // Fallback: load directly via <img> so the user can still animate & enjoy at 60 FPS
-      loadImageSource(url, fallbackUrl, title, onComplete);
+      console.warn('[Studio] Streaming fetch failed (CORS/proxy restriction). Streaming directly into 60 FPS engine:', err);
+
+      // KEEP MODAL VISIBLE! Continuous UI status feedback prevents confusion on large images
+      if (elBar) elBar.classList.add('indeterminate');
+      if (elStatus) elStatus.textContent = 'Preparing high-res master for 60 FPS engine...';
+      if (elBytes) elBytes.textContent = 'Streaming full master imagery...';
+
+      // Load directly via <img> with forceNoCors = true so no failed preflight round-trip occurs
+      loadImageSource(url, fallbackUrl, title, onComplete, true);
     }
   }
 
@@ -570,6 +551,11 @@
         try { activeFetchAbortController.abort(); } catch (e) {}
         activeFetchAbortController = null;
       }
+      if (rawSourceImage) {
+        rawSourceImage.onload = null;
+        rawSourceImage.onerror = null;
+        try { rawSourceImage.src = ''; } catch (e) {}
+      }
       const modal = document.getElementById('modal-image-fetch');
       if (modal) modal.classList.add('hidden');
     }
@@ -584,7 +570,7 @@
     if (btnCorsDownload) {
       btnCorsDownload.addEventListener('click', () => {
         if (!rawSourceImage || !rawSourceImage.src) return;
-        const safeName = (activeImageTitle || 'celestial_vista').replace(/[^a-zA-Z0-9_-]/g, '_') + '.jpg';
+        const safeName = generateExportFilename('jpg', 'source');
         const a = document.createElement('a');
         a.href = rawSourceImage.src;
         a.download = safeName;
@@ -619,10 +605,12 @@
   }
 
   /**
-   * Loads an image with CORS resilience, dynamic taint verification, and resolution evaluation
+   * Loads an image with CORS resilience, dynamic taint verification, and resolution evaluation.
+   * Keeps the loading modal active until onload fires, eliminating the premature close bug on large images.
    */
-  async function loadImageSource(url, fallbackUrl = null, title = 'Custom Celestial Image', onComplete = null) {
+  async function loadImageSource(url, fallbackUrl = null, title = 'Custom Celestial Image', onComplete = null, forceNoCors = false) {
     imageLoaded = false;
+    isAmoledGraded = false;
     activeImageTitle = title;
     isCanvasTainted = false;
 
@@ -632,9 +620,9 @@
 
     rawSourceImage = new Image();
 
-    // In-memory data URIs (default curated assets & local uploads) are always same-origin.
-    // For remote URLs, attempt anonymous CORS first so open archives (Wikimedia, ESO) stay untainted.
-    if (isDataUri || isBlobUri) {
+    // In-memory data/blob URIs are always same-origin.
+    // If forceNoCors is true, skip crossOrigin='anonymous' to avoid a guaranteed preflight failure.
+    if (forceNoCors || isDataUri || isBlobUri) {
       rawSourceImage.removeAttribute('crossorigin');
     } else if (isRemote) {
       rawSourceImage.crossOrigin = 'anonymous';
@@ -643,6 +631,10 @@
     }
 
     rawSourceImage.onload = () => {
+      // HIDE MODAL NOW! The image is decoded and ready for the 60 FPS canvas!
+      const modal = document.getElementById('modal-image-fetch');
+      if (modal) modal.classList.add('hidden');
+
       // Accurately verify if canvas is tainted in this browser environment
       isCanvasTainted = testCanvasTaint(rawSourceImage);
       console.log(`[Studio] Image loaded: ${rawSourceImage.naturalWidth} x ${rawSourceImage.naturalHeight} (${title}) [tainted: ${isCanvasTainted}]`);
@@ -685,20 +677,22 @@
     };
 
     rawSourceImage.onerror = () => {
-      // RESILIENCE FALLBACK FOR RESTRICTED CDNs & STRICT BROWSER POLICIES:
-      // If loading with crossOrigin='anonymous' failed (e.g. NASA CDN or browser file:// CORS restrictions),
+      // If loading with crossOrigin='anonymous' failed (CORS restriction),
       // auto-retry immediately WITHOUT crossOrigin!
-      // This allows the image to stream and play at 60 FPS in the studio without halting or showing an error!
-      if (rawSourceImage.hasAttribute('crossorigin')) {
+      if (rawSourceImage.hasAttribute('crossorigin') && !forceNoCors) {
         console.warn(`[Studio] Server rejected CORS preflight for ${url}. Retrying directly without crossOrigin for 60 FPS playback...`);
         rawSourceImage.removeAttribute('crossorigin');
         rawSourceImage.src = url;
         return;
       }
 
+      // Hide modal on final error
+      const modal = document.getElementById('modal-image-fetch');
+      if (modal) modal.classList.add('hidden');
+
       if (fallbackUrl && fallbackUrl !== url) {
         console.warn(`[Studio] Primary image failed (${url}), trying fallback: ${fallbackUrl}`);
-        loadImageSource(fallbackUrl, null, title, onComplete);
+        loadImageSource(fallbackUrl, null, title, onComplete, forceNoCors);
       } else {
         console.error(`[Studio] Failed to load image: ${url}`);
         const toast = document.getElementById('toast-image-specs');
@@ -1109,26 +1103,76 @@
     const btnBake = document.getElementById('btn-bake-grade');
 
     if (isCanvasTainted) {
+      if (rawSourceImage.src && (rawSourceImage.src.startsWith('http://') || rawSourceImage.src.startsWith('https://'))) {
+        if (btnBake) btnBake.textContent = '⏳ Untainting Source...';
+        fetch(`https://images.weserv.nl/?url=${encodeURIComponent(rawSourceImage.src)}&output=jpg`)
+          .then(res => {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.blob();
+          })
+          .then(blob => {
+            const cleanBlobUrl = URL.createObjectURL(blob);
+            console.log('[Studio] Auto-untainted remote source for AMOLED grading!');
+            loadImageSource(cleanBlobUrl, null, activeImageTitle, () => {
+              setTimeout(applyInBrowserGrade, 50);
+            }, false);
+          })
+          .catch(err => {
+            console.warn('[Studio] Auto-untaint for grading failed, showing assistant:', err.message);
+            showCorsHelperModal('grade');
+            if (btnBake) btnBake.textContent = '✨ Apply & Bake AMOLED Grade';
+          });
+        return;
+      }
+
       showCorsHelperModal('grade');
-      if (btnBake) btnBake.textContent = '✨ Apply & Bake AMOLED Grade';
+      const btnAmoled = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
+      const btnAdj = document.getElementById('btn-apply-adjustments');
+      if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade';
+      if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments';
       return;
     }
 
     const floor = parseFloat(document.getElementById('slider-black-floor').value);
     const knee = parseFloat(document.getElementById('slider-knee-width').value);
     const star = parseFloat(document.getElementById('slider-star-protect').value) / 100.0;
-    const contrast = parseFloat(document.getElementById('slider-contrast').value);
+    const exposureEl = document.getElementById('slider-exposure');
+    const exposure = exposureEl ? parseFloat(exposureEl.value) : 0.0;
+    const contrastEl = document.getElementById('slider-contrast');
+    const contrast = contrastEl ? parseFloat(contrastEl.value) : 1.08;
+    const saturationEl = document.getElementById('slider-saturation');
+    const saturation = saturationEl ? parseFloat(saturationEl.value) : 1.00;
+    const sharpnessEl = document.getElementById('slider-sharpness');
+    const sharpness = sharpnessEl ? (parseFloat(sharpnessEl.value) / 100.0) : 0.0;
 
-    if (btnBake) btnBake.textContent = '⏳ Processing Pixels...';
+    const btnAmoled = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
+    const btnAdj = document.getElementById('btn-apply-adjustments');
+
+    if (triggerType === 'amoled') {
+      if (btnAmoled) btnAmoled.textContent = '⏳ Baking AMOLED...';
+    } else if (triggerType === 'adjustments') {
+      if (btnAdj) btnAdj.textContent = '⏳ Processing Pixels...';
+    } else {
+      if (btnAmoled) btnAmoled.textContent = '⏳ Processing...';
+      if (btnAdj) btnAdj.textContent = '⏳ Processing...';
+    }
 
     setTimeout(async () => {
       try {
+        const selResEl = document.getElementById('select-export-html-res');
+        const resMode = selResEl ? selResEl.value : '5k';
+        // Safe 5K (5120px) ceiling for CPU pixel processing to prevent UI freezes on 100MP+ images
+        const maxDim = (resMode === '8k') ? 8192 : ((resMode === '4k') ? 3840 : ((resMode === '1080p') ? 1920 : 5120));
+
         const stats = gradingEngine.applyGrade(rawSourceImage, bakedGradedCanvas, {
           blackFloor: floor,
           kneeWidth: knee,
           starProtect: star,
+          exposure: exposure,
           contrast: contrast,
-          maxDimension: 5120
+          saturation: saturation,
+          sharpness: sharpness,
+          maxDimension: maxDim
         });
 
         // Convert software-backed CPU canvas to a hardware-accelerated GPU ImageBitmap!
@@ -1156,6 +1200,7 @@
         }
 
         activeRenderDrawable = hardwareDrawable;
+        isAmoledGraded = true;
         const dw = activeRenderDrawable.width || activeRenderDrawable.naturalWidth;
         const dh = activeRenderDrawable.height || activeRenderDrawable.naturalHeight;
         cameraEngine.setImageDimensions(dw, dh);
@@ -1170,18 +1215,85 @@
           elSavings.textContent = `~${estSavings}%`;
         }
 
-        if (btnBake) btnBake.textContent = '✨ Apply & Bake AMOLED Grade';
-        console.log(`[Studio] AMOLED grade baked into GPU hardware texture: ${stats.blackPercentage}% true black in ${stats.elapsedMs}ms`);
+        if (triggerType === 'amoled') {
+          if (btnAmoled) {
+            btnAmoled.textContent = '✓ AMOLED Grade Baked!';
+            setTimeout(() => { if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade'; }, 1500);
+          }
+        } else if (triggerType === 'adjustments') {
+          if (btnAdj) {
+            btnAdj.textContent = '✓ Adjustments Applied!';
+            setTimeout(() => { if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments'; }, 1500);
+          }
+        } else {
+          if (btnAmoled) {
+            btnAmoled.textContent = '✓ Applied!';
+            setTimeout(() => { if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade'; }, 1500);
+          }
+          if (btnAdj) {
+            btnAdj.textContent = '✓ Applied!';
+            setTimeout(() => { if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments'; }, 1500);
+          }
+        }
+        console.log(`[Studio] ${triggerType} baked into GPU texture: ${stats.blackPercentage}% true black in ${stats.elapsedMs}ms`);
       } catch (err) {
-        console.error('AMOLED grade failed:', err);
-        if (btnBake) btnBake.textContent = '✨ Apply & Bake AMOLED Grade';
+        console.error('Grading failed:', err);
+        if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade';
+        if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments';
         alert('Could not grade pixels: This external image does not allow direct pixel manipulation due to CORS. Please download the image and drag-and-drop it into the app.');
       }
     }, 20);
   }
 
   /**
-   * Resets and undoes any baked AMOLED grade, reverting to the original un-graded raw master image
+   * Resets only the AMOLED black crushing parameters to default
+   */
+  function resetAmoledSection() {
+    const resetVals = {
+      'black-floor': { val: 22, text: '22' },
+      'knee-width': { val: 24, text: '24' },
+      'star-protect': { val: 85, text: '85%' }
+    };
+    Object.entries(resetVals).forEach(([id, cfg]) => {
+      const slider = document.getElementById(`slider-${id}`);
+      const valLabel = document.getElementById(`val-${id}`);
+      if (slider) slider.value = cfg.val;
+      if (valLabel) valLabel.textContent = cfg.text;
+    });
+    const btn = document.getElementById('btn-reset-amoled');
+    if (btn) {
+      btn.textContent = '✓ Reset!';
+      setTimeout(() => { if (btn) btn.textContent = '↩ Reset'; }, 1200);
+    }
+    applyInBrowserGrade('amoled');
+  }
+
+  /**
+   * Resets only the visual enhancements (exposure, contrast, saturation, sharpness) to default
+   */
+  function resetAdjustmentsSection() {
+    const resetVals = {
+      'exposure': { val: 0, text: '+0.00 EV' },
+      'contrast': { val: 1.08, text: '1.08x' },
+      'saturation': { val: 1.00, text: '1.00x' },
+      'sharpness': { val: 0, text: '0%' }
+    };
+    Object.entries(resetVals).forEach(([id, cfg]) => {
+      const slider = document.getElementById(`slider-${id}`);
+      const valLabel = document.getElementById(`val-${id}`);
+      if (slider) slider.value = cfg.val;
+      if (valLabel) valLabel.textContent = cfg.text;
+    });
+    const btn = document.getElementById('btn-reset-adjustments');
+    if (btn) {
+      btn.textContent = '✓ Reset!';
+      setTimeout(() => { if (btn) btn.textContent = '↩ Reset'; }, 1200);
+    }
+    applyInBrowserGrade('adjustments');
+  }
+
+  /**
+   * Reverts all changes back to the original un-graded raw master image
    */
   function resetAmoledGrade() {
     if (!imageLoaded || !rawSourceImage) return;
@@ -1190,11 +1302,29 @@
       try { activeRenderDrawable.close(); } catch (e) {}
     }
     activeRenderDrawable = rawSourceImage;
+    isAmoledGraded = false;
     cameraEngine.setImageDimensions(rawSourceImage.naturalWidth, rawSourceImage.naturalHeight);
     resizeViewport();
     drawRadarBackground();
     updateSplineEditorView();
     runAutoGradeTelemetry();
+
+    // Reset all 7 sliders & labels to default states
+    const resetVals = {
+      'black-floor': { val: 22, text: '22' },
+      'knee-width': { val: 24, text: '24' },
+      'star-protect': { val: 85, text: '85%' },
+      'exposure': { val: 0, text: '+0.00 EV' },
+      'contrast': { val: 1.08, text: '1.08x' },
+      'saturation': { val: 1.00, text: '1.00x' },
+      'sharpness': { val: 0, text: '0%' }
+    };
+    Object.entries(resetVals).forEach(([id, cfg]) => {
+      const slider = document.getElementById(`slider-${id}`);
+      const valLabel = document.getElementById(`val-${id}`);
+      if (slider) slider.value = cfg.val;
+      if (valLabel) valLabel.textContent = cfg.text;
+    });
 
     const specs = calculateImageQualitySpecs(rawSourceImage, 0, isCanvasTainted);
     activeImageSpecs = specs;
@@ -1211,7 +1341,7 @@
       btnUndo.textContent = '✓ Reverted!';
       setTimeout(() => { btnUndo.textContent = orig; }, 1200);
     }
-    console.log('[Studio] AMOLED grade reverted to original master image.');
+    console.log('[Studio] All adjustments & AMOLED grade reverted to original master image.');
   }
 
   /**
@@ -1541,17 +1671,22 @@
       });
     });
 
-    // Real-time Search input
+    // Real-time Search input with 300ms debounce
+    let searchDebounceTimer = null;
     searchInput.addEventListener('input', (e) => {
       const q = e.target.value;
       btnClearSearch.style.display = q ? 'block' : 'none';
-      if (activeFilter !== 'nasa-archive') {
-        renderCuratedCards(activeFilter, q);
-      }
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        if (activeFilter !== 'nasa-archive') {
+          renderCuratedCards(activeFilter, q);
+        }
+      }, 300);
     });
 
     // Clear Search button
     btnClearSearch.addEventListener('click', () => {
+      clearTimeout(searchDebounceTimer);
       searchInput.value = '';
       btnClearSearch.style.display = 'none';
       renderCuratedCards(activeFilter, '');
@@ -1570,16 +1705,17 @@
     // Search action trigger
     const triggerArchiveSearch = () => {
       const q = searchInput.value.trim();
-      if (!q) {
-        alert('Please enter a celestial object to search (e.g. "Orion", "Andromeda", "Black Hole", "Crab Nebula")');
+      const source = archiveSelector ? archiveSelector.value : 'all';
+      if (!q && source !== 'surveys' && source !== 'eso' && source !== 'chandra') {
+        alert('Please enter a celestial object or sky coordinates (e.g. "Orion", "M31", "Crab Nebula", "83.82, -5.39")');
         return;
       }
       chips.forEach(c => c.classList.toggle('active', c.dataset.filter === 'nasa-archive'));
       activeFilter = 'nasa-archive';
       curatedSection.style.display = 'none';
       nasaSection.style.display = 'flex';
-      const source = archiveSelector ? archiveSelector.value : 'all';
-      searchGlobalArchives(q, source);
+      const defaultQ = (source === 'eso') ? 'eso' : (source === 'chandra') ? 'chandra' : 'surveys';
+      searchGlobalArchives(q || defaultQ, source);
     };
 
     if (btnSearchNasa) btnSearchNasa.addEventListener('click', triggerArchiveSearch);
@@ -1589,7 +1725,8 @@
 
     if (archiveSelector) {
       archiveSelector.addEventListener('change', () => {
-        const q = searchInput.value.trim() || 'nebula';
+        const defaultQ = (archiveSelector.value === 'eso') ? 'eso' : (archiveSelector.value === 'chandra') ? 'chandra' : (archiveSelector.value === 'surveys') ? 'surveys' : 'nebula';
+        const q = searchInput.value.trim() || defaultQ;
         if (activeFilter === 'nasa-archive') {
           searchGlobalArchives(q, archiveSelector.value);
         }
@@ -1597,20 +1734,628 @@
     }
 
     /**
+     * Built-in Offline Celestial Target Catalog:
+     * Provides 0-millisecond offline lookup with precise J2000 coordinates
+     * for 40+ premier astronomical objects and broad categories (nebulae, galaxies, clusters).
+     */
+    const CELESTIAL_CATALOG = [
+      {
+        name: 'Orion Nebula (M42)',
+        keywords: ['orion', 'm42', 'm 42', 'ngc 1976', 'nebula', 'sword'],
+        ra: 83.8221, dec: -5.3911, scale: 0.5, category: 'nebula',
+        desc: 'Closest massive star-forming nursery to Earth. Unveils glowing gas filaments and young stellar nurseries.',
+        master: {
+          w: 18000,
+          h: 18000,
+          mp: 324.0,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Orion_Nebula_-_Hubble_2006_mosaic_18000.jpg/960px-Orion_Nebula_-_Hubble_2006_mosaic_18000.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/f/f3/Orion_Nebula_-_Hubble_2006_mosaic_18000.jpg',
+          obs: 'Hubble ACS 2006 Gigapixel Mosaic'
+        }
+      },
+      {
+        name: 'Carina Nebula (NGC 3372)',
+        keywords: ['carina', 'ngc 3372', 'eta carinae', 'keyhole', 'nebula'],
+        ra: 161.2650, dec: -59.8660, scale: 0.8, category: 'nebula',
+        desc: 'One of the largest diffuse nebulae in the sky, hosting the unstable supermassive star Eta Carinae.',
+        master: {
+          w: 13092,
+          h: 8926,
+          mp: 116.8,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Carina_Nebula.jpg/960px-Carina_Nebula.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/e/ea/Carina_Nebula.jpg',
+          obs: 'ESO VLT / MPG WFI Gigapixel Survey'
+        }
+      },
+      {
+        name: 'Pillars of Creation / Eagle Nebula (M16)',
+        keywords: ['pillars', 'pillars of creation', 'eagle', 'm16', 'm 16', 'ngc 6611', 'nebula'],
+        ra: 274.7000, dec: -13.8070, scale: 0.5, category: 'nebula',
+        desc: 'Towering interstellar columns of cool hydrogen gas and dust sculpting newborn stars.',
+        master: {
+          w: 13500,
+          h: 9000,
+          mp: 121.5,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/M16-29-06-2025-Luc_Viatour.jpg/960px-M16-29-06-2025-Luc_Viatour.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/5/52/M16-29-06-2025-Luc_Viatour.jpg',
+          obs: 'Hubble Heritage High-Definition'
+        }
+      },
+      {
+        name: 'Andromeda Galaxy (M31)',
+        keywords: ['andromeda', 'm31', 'm 31', 'ngc 224', 'galaxy'],
+        ra: 10.6847, dec: 41.2687, scale: 0.8, category: 'galaxy',
+        desc: 'The nearest major barred spiral galaxy to our Milky Way, containing over one trillion stars.',
+        master: {
+          w: 40000,
+          h: 12788,
+          mp: 511.5,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Andromeda_Galaxy_M31_-_Heic1502a_Full_resolution.jpg/960px-Andromeda_Galaxy_M31_-_Heic1502a_Full_resolution.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/b/b3/Andromeda_Galaxy_M31_-_Heic1502a_Full_resolution.jpg',
+          obs: 'Hubble PHAT Ultra-HD Survey'
+        }
+      },
+      {
+        name: 'Crab Nebula (M1)',
+        keywords: ['crab', 'm1', 'm 1', 'ngc 1952', 'supernova', 'nebula'],
+        ra: 83.6331, dec: 22.0145, scale: 0.4, category: 'nebula',
+        desc: 'Expanding supernova remnant powered by an ultra-dense central pulsing neutron star (pulsar).',
+        master: {
+          w: 3864,
+          h: 3864,
+          mp: 14.9,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Crab_Nebula.jpg/960px-Crab_Nebula.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/0/00/Crab_Nebula.jpg',
+          obs: 'Hubble Heritage 24-Frame Mosaic'
+        }
+      },
+      {
+        name: 'Whirlpool Galaxy (M51)',
+        keywords: ['whirlpool', 'm51', 'm 51', 'ngc 5194', 'galaxy'],
+        ra: 202.4696, dec: 47.1953, scale: 0.5, category: 'galaxy',
+        desc: 'Grand-design spiral galaxy interacting with its companion dwarf galaxy NGC 5195.',
+        master: {
+          w: 11477,
+          h: 7965,
+          mp: 91.4,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Messier51.jpg/960px-Messier51.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/1/11/Messier51.jpg',
+          obs: 'Hubble ACS Grand Design Survey'
+        }
+      },
+      {
+        name: 'Sombrero Galaxy (M104)',
+        keywords: ['sombrero', 'm104', 'm 104', 'ngc 4594', 'galaxy'],
+        ra: 189.9976, dec: -11.6231, scale: 0.5, category: 'galaxy',
+        desc: 'Unusual lenticular galaxy featuring a brilliant nucleus and prominent dark dust lane.',
+        master: {
+          w: 11472,
+          h: 6429,
+          mp: 73.8,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/M104_ngc4594_sombrero_galaxy_hi-res.jpg/960px-M104_ngc4594_sombrero_galaxy_hi-res.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/M104_ngc4594_sombrero_galaxy_hi-res.jpg',
+          obs: 'Hubble ACS Deep Space Observation'
+        }
+      },
+      {
+        name: 'Pleiades / Seven Sisters (M45)',
+        keywords: ['pleiades', 'm45', 'm 45', 'seven sisters', 'subaru', 'cluster', 'stars'],
+        ra: 56.7500, dec: 24.1170, scale: 1.0, category: 'cluster',
+        desc: 'Brilliant open star cluster enshrouded in luminous blue reflection nebulosity.',
+        master: {
+          w: 8137,
+          h: 5441,
+          mp: 44.3,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/M45-Les_Pl%C3%A9iades_Hamois_le_28-12-2024-Luc_Viatour.jpg/960px-M45-Les_Pl%C3%A9iades_Hamois_le_28-12-2024-Luc_Viatour.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/f/ff/M45-Les_Pl%C3%A9iades_Hamois_le_28-12-2024-Luc_Viatour.jpg',
+          obs: 'High-Definition Deep Sky Survey'
+        }
+      },
+      {
+        name: 'Helix Nebula (NGC 7293)',
+        keywords: ['helix', 'ngc 7293', 'eye of god', 'nebula'],
+        ra: 337.4108, dec: -20.8372, scale: 0.6, category: 'nebula',
+        desc: 'A planetary nebula often called the Eye of God, formed at the end of an intermediate star\'s life.',
+        master: {
+          w: 6145,
+          h: 6623,
+          mp: 40.7,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/NGC7293_%282004%29.jpg/960px-NGC7293_%282004%29.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/b/b1/NGC7293_%282004%29.jpg',
+          obs: 'Hubble ACS & Blanco 4m Mosaic'
+        }
+      },
+      {
+        name: 'Ring Nebula (M57)',
+        keywords: ['ring', 'm57', 'm 57', 'ngc 6720', 'nebula'],
+        ra: 283.3963, dec: 33.0292, scale: 0.3, category: 'nebula',
+        desc: 'Classic planetary nebula displaying glowing shells of ionized gas expelled by a dying white dwarf.',
+        master: {
+          w: 3179,
+          h: 3179,
+          mp: 10.1,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Hubble_image_of_the_Ring_Nebula_%28Messier_57%29.jpg/960px-Hubble_image_of_the_Ring_Nebula_%28Messier_57%29.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/f/fe/Hubble_image_of_the_Ring_Nebula_%28Messier_57%29.jpg',
+          obs: 'Hubble WFC3 Ionized Gas Survey'
+        }
+      },
+      {
+        name: 'Tarantula Nebula (30 Doradus)',
+        keywords: ['tarantula', '30 doradus', 'ngc 2070', 'lmc', 'nebula'],
+        ra: 84.6766, dec: -69.1009, scale: 0.8, category: 'nebula',
+        desc: 'Extremely luminous H II region in the Large Magellanic Cloud, the most active starburst in the Local Group.',
+        master: {
+          w: 2016,
+          h: 2038,
+          mp: 4.1,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Tarantula_Nebula_TRAPPIST.jpg/960px-Tarantula_Nebula_TRAPPIST.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/8/80/Tarantula_Nebula_TRAPPIST.jpg',
+          obs: 'ESO TRAPPIST Deep Survey'
+        }
+      },
+      {
+        name: 'Triangulum Galaxy (M33)',
+        keywords: ['triangulum', 'm33', 'm 33', 'ngc 598', 'pinwheel', 'galaxy'],
+        ra: 23.4621, dec: 30.6599, scale: 0.8, category: 'galaxy',
+        desc: 'Third-largest member of the Local Group, packed with vast starbirth regions like NGC 604.'
+      },
+      {
+        name: 'Pinwheel Galaxy (M101)',
+        keywords: ['pinwheel', 'm101', 'm 101', 'ngc 5457', 'galaxy'],
+        ra: 210.8024, dec: 54.3490, scale: 0.6, category: 'galaxy',
+        desc: 'Face-on grand design spiral galaxy with prominent arms brimming with H II regions.',
+        master: {
+          w: 15852,
+          h: 12392,
+          mp: 196.4,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/M101_hires_STScI-PRC2006-10a.jpg/960px-M101_hires_STScI-PRC2006-10a.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/c/c5/M101_hires_STScI-PRC2006-10a.jpg',
+          obs: 'Hubble ACS Pinwheel Grand Mosaic'
+        }
+      },
+      {
+        name: 'Cigar Galaxy (M82)',
+        keywords: ['cigar', 'm82', 'm 82', 'ngc 3034', 'starburst', 'galaxy'],
+        ra: 148.9685, dec: 69.6797, scale: 0.4, category: 'galaxy',
+        desc: 'Prototypical starburst galaxy undergoing dramatic superwind outflows of glowing hydrogen.'
+      },
+      {
+        name: 'Bode\'s Galaxy (M81)',
+        keywords: ['bode', 'bodes', 'm81', 'm 81', 'ngc 3031', 'galaxy'],
+        ra: 148.8882, dec: 69.0653, scale: 0.5, category: 'galaxy',
+        desc: 'Grand spiral galaxy with an active galactic nucleus harboring a 70-million-solar-mass black hole.'
+      },
+      {
+        name: 'Horsehead Nebula (Barnard 33)',
+        keywords: ['horsehead', 'barnard 33', 'b33', 'ic 434', 'nebula'],
+        ra: 85.2458, dec: -2.4583, scale: 0.4, category: 'nebula',
+        desc: 'Famous dark absorption nebula silhouetted against the crimson emission nebula IC 434.'
+      },
+      {
+        name: 'Rosette Nebula (NGC 2237)',
+        keywords: ['rosette', 'ngc 2237', 'ngc 2244', 'skull', 'nebula'],
+        ra: 98.7000, dec: 4.9000, scale: 0.9, category: 'nebula',
+        desc: 'Vast spherical emission nebula shaped like a cosmic rose petal around an open cluster of hot O-stars.'
+      },
+      {
+        name: 'Lagoon Nebula (M8)',
+        keywords: ['lagoon', 'm8', 'm 8', 'ngc 6523', 'nebula'],
+        ra: 271.1370, dec: -24.3800, scale: 0.6, category: 'nebula',
+        desc: 'Giant interstellar cloud in Sagittarius classified as an emission nebula and H II region.'
+      },
+      {
+        name: 'Trifid Nebula (M20)',
+        keywords: ['trifid', 'm20', 'm 20', 'ngc 6514', 'nebula'],
+        ra: 270.6120, dec: -23.0310, scale: 0.5, category: 'nebula',
+        desc: 'Rare combination of open cluster, emission nebula, reflection nebula, and dark dust lanes.'
+      },
+      {
+        name: 'Dumbbell Nebula (M27)',
+        keywords: ['dumbbell', 'apple core', 'm27', 'm 27', 'ngc 6853', 'nebula'],
+        ra: 299.9010, dec: 22.7210, scale: 0.4, category: 'nebula',
+        desc: 'The very first planetary nebula discovered by Charles Messier in 1764.'
+      },
+      {
+        name: 'Veil Nebula / Cygnus Loop (NGC 6960)',
+        keywords: ['veil', 'cygnus loop', 'ngc 6960', 'witches broom', 'supernova', 'nebula'],
+        ra: 312.7500, dec: 30.7000, scale: 0.8, category: 'nebula',
+        desc: 'Delicate filamentary shock waves from an ancient supernova explosion 20,000 years ago.'
+      },
+      {
+        name: 'Bubble Nebula (NGC 7635)',
+        keywords: ['bubble', 'ngc 7635', 'caldwell 11', 'nebula'],
+        ra: 350.2180, dec: 61.2010, scale: 0.4, category: 'nebula',
+        desc: 'Spectacular wind-blown cosmic bubble inflated by stellar winds from an extremely hot O-star.'
+      },
+      {
+        name: 'Cat\'s Eye Nebula (NGC 6543)',
+        keywords: ['cat\'s eye', 'cats eye', 'ngc 6543', 'planetary nebula', 'nebula'],
+        ra: 269.6390, dec: 66.6330, scale: 0.3, category: 'nebula',
+        desc: 'One of the most structurally complex planetary nebulae known, with concentric bubbles and jets.'
+      },
+      {
+        name: 'Flame Nebula (NGC 2024)',
+        keywords: ['flame', 'ngc 2024', 'alnitak', 'nebula'],
+        ra: 85.4290, dec: -1.8580, scale: 0.4, category: 'nebula',
+        desc: 'Fiery emission nebula next to Orion\'s easternmost belt star Alnitak.'
+      },
+      {
+        name: 'Cartwheel Galaxy',
+        keywords: ['cartwheel', 'eso 350-40', 'galaxy'],
+        ra: 9.4340, dec: -33.7160, scale: 0.4, category: 'galaxy',
+        desc: 'Remarkable ring galaxy resulting from a high-speed collision between two galaxies.'
+      },
+      {
+        name: 'Black Eye Galaxy (M64)',
+        keywords: ['black eye', 'evil eye', 'm64', 'm 64', 'ngc 4826', 'galaxy'],
+        ra: 194.1820, dec: 21.6820, scale: 0.4, category: 'galaxy',
+        desc: 'Famous for the spectacular dark band of absorbing dust in front of its bright bright nucleus.'
+      },
+      {
+        name: 'Centaurus A (NGC 5128)',
+        keywords: ['centaurus a', 'cen a', 'ngc 5128', 'galaxy'],
+        ra: 201.3650, dec: -43.0190, scale: 0.6, category: 'galaxy',
+        desc: 'Prominent peculiar radio galaxy with a supermassive black hole emitting relativistic plasma jets.'
+      },
+      {
+        name: 'Large Magellanic Cloud (LMC)',
+        keywords: ['large magellanic cloud', 'lmc', 'magellanic', 'galaxy'],
+        ra: 80.8940, dec: -69.7560, scale: 1.5, category: 'galaxy',
+        desc: 'Satellite dwarf galaxy orbiting the Milky Way, rich in dark nebulae and star-forming clouds.'
+      },
+      {
+        name: 'Small Magellanic Cloud (SMC)',
+        keywords: ['small magellanic cloud', 'smc', 'magellanic', 'galaxy'],
+        ra: 13.1870, dec: -72.8290, scale: 1.2, category: 'galaxy',
+        desc: 'Dwarf irregular galaxy containing several hundred million stars.'
+      },
+      {
+        name: 'Hercules Cluster (M13)',
+        keywords: ['hercules', 'm13', 'm 13', 'ngc 6205', 'globular cluster', 'cluster'],
+        ra: 250.4220, dec: 36.4600, scale: 0.4, category: 'cluster',
+        desc: 'Great globular cluster in Hercules holding several hundred thousand ancient stars in a spherical swarm.'
+      },
+      {
+        name: 'Omega Centauri (NGC 5139)',
+        keywords: ['omega centauri', 'ngc 5139', 'globular cluster', 'cluster'],
+        ra: 201.6970, dec: -47.4770, scale: 0.6, category: 'cluster',
+        desc: 'Largest and brightest globular cluster in the Milky Way, containing roughly 10 million stars.'
+      },
+      {
+        name: 'Butterfly Cluster (M6)',
+        keywords: ['butterfly', 'm6', 'm 6', 'ngc 6405', 'open cluster', 'cluster'],
+        ra: 265.0420, dec: -32.2210, scale: 0.5, category: 'cluster',
+        desc: 'Open cluster in Scorpius whose stars resemble a butterfly with outstretched wings.'
+      },
+      {
+        name: 'Hubble Ultra Deep Field (HUDF)',
+        keywords: ['deep field', 'hudf', 'fornax', 'hubble deep field', 'galaxy', 'field'],
+        ra: 53.1625, dec: -27.7914, scale: 0.4, category: 'galaxy',
+        desc: 'Lookback view of nearly 10,000 galaxies across cosmic time reaching back to the dawn of the universe.',
+        master: {
+          w: 2300,
+          h: 2100,
+          mp: 4.8,
+          thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/NASA-HS201427a-HubbleUltraDeepField2014-20140603.jpg/960px-NASA-HS201427a-HubbleUltraDeepField2014-20140603.jpg',
+          full: 'https://upload.wikimedia.org/wikipedia/commons/6/69/NASA-HS201427a-HubbleUltraDeepField2014-20140603.jpg',
+          obs: 'Hubble 1-Million-Second Ultra Deep Field'
+        }
+      },
+      {
+        name: 'Webb Deep Field (SMACS 0723)',
+        keywords: ['smacs 0723', 'webb deep field', 'jwst deep field', 'gravitational lens', 'galaxy'],
+        ra: 110.8375, dec: -73.4542, scale: 0.4, category: 'galaxy',
+        desc: 'Gravitational lens galaxy cluster SMACS 0723 magnifying the deepest infrared galaxies ever imaged.'
+      },
+      {
+        name: 'Galactic Center (Sagittarius A*)',
+        keywords: ['galactic center', 'sagittarius a', 'sag a', 'milky way core', 'black hole', 'center'],
+        ra: 266.4168, dec: -29.0078, scale: 0.8, category: 'cluster',
+        desc: 'Dynamic core of our Milky Way galaxy harboring supermassive black hole Sagittarius A*.'
+      },
+      {
+        name: 'North America Nebula (NGC 7000)',
+        keywords: ['north america', 'ngc 7000', 'cygnus', 'nebula'],
+        ra: 314.7500, dec: 44.3300, scale: 1.0, category: 'nebula',
+        desc: 'Remarkable emission nebula whose shape resembles the continent of North America.'
+      },
+      {
+        name: 'Heart Nebula (IC 1805)',
+        keywords: ['heart', 'ic 1805', 'cassiopeia', 'nebula'],
+        ra: 38.2000, dec: 61.4500, scale: 1.0, category: 'nebula',
+        desc: 'Glowing emission nebula shaped like a cosmic heart, illuminated by open cluster Melotte 15.'
+      },
+      {
+        name: 'Soul Nebula (IC 1848)',
+        keywords: ['soul', 'ic 1848', 'westerhout 5', 'nebula'],
+        ra: 43.8000, dec: 60.4200, scale: 1.0, category: 'nebula',
+        desc: 'Companion emission and star-forming nebula right next to the Heart Nebula in Cassiopeia.'
+      },
+      {
+        name: 'California Nebula (NGC 1499)',
+        keywords: ['california', 'ngc 1499', 'perseus', 'nebula'],
+        ra: 60.8200, dec: 36.4200, scale: 1.0, category: 'nebula',
+        desc: 'Vast, faint emission nebula spanning 2.5 degrees across Perseus, glowing from nearby Menkhib.'
+      },
+      {
+        name: 'Elephant Trunk Nebula (IC 1396)',
+        keywords: ['elephant trunk', 'ic 1396', 'cepheus', 'nebula'],
+        ra: 324.7500, dec: 57.5000, scale: 0.8, category: 'nebula',
+        desc: 'Dense globule of gas and dust forming stars within the ionized IC 1396 region in Cepheus.'
+      }
+    ];
+
+    /**
+     * Parses direct celestial coordinates:
+     * e.g. "83.822, -5.391", "ra: 83.822 dec: -5.391", "161.27 -59.88"
+     */
+    function parseCoordinates(query) {
+      if (!query) return null;
+      const str = query.trim();
+      const decRegex = /^(?:ra[:\s]*)?([-+]?\d+(?:\.\d+)?)[,\s]+(?:dec[:\s]*)?([-+]?\d+(?:\.\d+)?)$/i;
+      const m = str.match(decRegex);
+      if (m) {
+        let ra = parseFloat(m[1]);
+        let dec = parseFloat(m[2]);
+        if (!isNaN(ra) && !isNaN(dec) && ra >= -360 && ra <= 360 && dec >= -90 && dec <= 90) {
+          if (ra < 0) ra += 360;
+          return { ra, dec, label: `Coordinates (${ra.toFixed(3)}°, ${dec.toFixed(3)}°)` };
+        }
+      }
+      return null;
+    }
+
+    /**
+     * Resolves celestial object names (e.g. "M31", "Orion", "NGC 3324", "Crab Nebula")
+     * to precise J2000 Right Ascension and Declination via CDS Sesame.
+     * Uses Harvard & IDIA CORS-enabled mirrors with regex fallback to prevent network/XML failures.
+     */
+    async function resolveTargetViaSesame(targetName) {
+      if (!targetName || targetName.length < 2) return null;
+
+      // Harvard CFA and IDIA mirrors support Access-Control-Allow-Origin: * without 302 CORS drop
+      const mirrors = [
+        `https://vizier.cfa.harvard.edu/viz-bin/nph-sesame/-ox/SNV?${encodeURIComponent(targetName)}`,
+        `https://vizier.idia.ac.za/viz-bin/nph-sesame/-ox/SNV?${encodeURIComponent(targetName)}`
+      ];
+
+      for (const url of mirrors) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2800);
+          const resp = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (!resp.ok) continue;
+
+          const xmlText = await resp.text();
+
+          // Regex parsing is immune to XML namespace / DOMParser schema issues
+          const raMatch = xmlText.match(/<jradeg>([+-]?\d+(?:\.\d+)?)<\/jradeg>/i);
+          const decMatch = xmlText.match(/<jdedeg>([+-]?\d+(?:\.\d+)?)<\/jdedeg>/i);
+          const onameMatch = xmlText.match(/<oname>([^<]+)<\/oname>/i);
+
+          if (raMatch && decMatch) {
+            const ra = parseFloat(raMatch[1]);
+            const dec = parseFloat(decMatch[1]);
+            if (!isNaN(ra) && !isNaN(dec)) {
+              const label = onameMatch ? onameMatch[1].trim() : targetName;
+              return { ra, dec, label };
+            }
+          }
+        } catch (e) {
+          // Timeout or mirror unavailable, proceed to next mirror
+        }
+      }
+      return null;
+    }
+
+    /**
+     * Generates CORS-free Sky Survey Master Cutouts & Ultra-HD Observatory Masters.
+     * Guaranteed 100% untainted canvas access for AMOLED true-black grading & export.
+     */
+    async function fetchSkySurveys(query) {
+      const qRaw = (query || '').trim();
+      const q = qRaw.toLowerCase();
+      let targets = [];
+
+      // 1. Check if query is generic or asking for all surveys
+      const isGeneric = !q || q === 'surveys' || q === 'deepskysurvey' || q === 'deep sky' || q === 'sky' || q === 'stars' || q === 'space' || q === 'all';
+      if (isGeneric) {
+        const showcaseNames = [
+          'Orion Nebula (M42)',
+          'Carina Nebula (NGC 3372)',
+          'Pillars of Creation / Eagle Nebula (M16)',
+          'Andromeda Galaxy (M31)',
+          'Crab Nebula (M1)',
+          'Whirlpool Galaxy (M51)',
+          'Sombrero Galaxy (M104)',
+          'Pleiades / Seven Sisters (M45)'
+        ];
+        targets = CELESTIAL_CATALOG.filter(t => showcaseNames.includes(t.name));
+      } else {
+        // Fast keyword & name match in catalog
+        targets = CELESTIAL_CATALOG.filter(item => {
+          if (item.name.toLowerCase().includes(q)) return true;
+          return item.keywords.some(k => q.includes(k) || k.includes(q));
+        });
+      }
+
+      // 2. If no catalog match, check direct coordinates
+      if (targets.length === 0) {
+        const coords = parseCoordinates(qRaw);
+        if (coords) {
+          targets.push({
+            name: coords.label,
+            ra: coords.ra,
+            dec: coords.dec,
+            scale: 0.5,
+            desc: `Precision celestial coordinates: RA ${coords.ra.toFixed(4)}°, Dec ${coords.dec.toFixed(4)}°.`
+          });
+        }
+      }
+
+      // 3. If still no targets, resolve via Sesame mirror (Harvard & IDIA with CORS)
+      if (targets.length === 0 && qRaw.length >= 2) {
+        const resolved = await resolveTargetViaSesame(qRaw);
+        if (resolved) {
+          targets.push({
+            name: resolved.label,
+            ra: resolved.ra,
+            dec: resolved.dec,
+            scale: 0.5,
+            desc: `Astronomical target resolved via CDS Sesame: RA ${resolved.ra.toFixed(4)}°, Dec ${resolved.dec.toFixed(4)}°.`
+          });
+        }
+      }
+
+      if (targets.length === 0) return [];
+
+      // Return cutouts for up to 8 matching celestial objects
+      const selectedTargets = targets.slice(0, 8);
+      const results = [];
+
+      for (const tgt of selectedTargets) {
+        const { ra, dec, scale = 0.5, name, desc = 'Deep space astronomical observation.' } = tgt;
+        const raStr = ra.toFixed(4);
+        const decStr = (dec >= 0 ? '+' : '') + dec.toFixed(4);
+        const coordBadge = `RA: ${raStr}° • Dec: ${decStr}°`;
+
+        // 1. If target has a curated Ultra-HD observatory survey master (Hubble/ESO/JWST), feature it first!
+        if (tgt.master) {
+          results.push({
+            source: tgt.master.obs || 'Observatory Survey Master',
+            sourceTag: `🔭 Ultra-HD Master (${tgt.master.mp.toFixed(1)} MP)`,
+            title: `${name} (${tgt.master.obs ? tgt.master.obs.split(' ')[0] : 'Observatory'} Survey Master)`,
+            desc: `${desc} True observatory master: ${tgt.master.w.toLocaleString()} × ${tgt.master.h.toLocaleString()} (${tgt.master.mp.toFixed(1)} MP). High dynamic contrast for OLED.`,
+            thumb: tgt.master.thumb,
+            fullUrl: tgt.master.full,
+            width: tgt.master.w,
+            height: tgt.master.h,
+            mp: tgt.master.mp
+          });
+        }
+
+        // 2. SDSS DR18 Optical Sky Survey (where declination is in SDSS footprint: -15° to +75°)
+        // Available for targeted searches and coordinates
+        if (!isGeneric && dec >= -15 && dec <= 75) {
+          results.push({
+            source: 'SDSS DR18 SkyServer',
+            sourceTag: '🔭 SDSS Optical (CORS-Free)',
+            title: `${name} (SDSS Optical)`,
+            desc: `Sloan Digital Sky Survey DR18 optical observation. ${coordBadge}. 100% untainted grading & export.`,
+            thumb: `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg?ra=${ra}&dec=${dec}&scale=0.8&width=600&height=400`,
+            fullUrl: `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg?ra=${ra}&dec=${dec}&scale=0.4&width=2048&height=2048`,
+            width: 2048,
+            height: 2048,
+            mp: 4.2
+          });
+        }
+
+        // 3. For coordinates or objects without a curated master, provide DESI / DECam Optical Cutout
+        // Uses CDN proxy for the thumbnail to prevent browser HTTP 429 rate limits
+        if (!tgt.master) {
+          const directLegacyThumb = `https://www.legacysurvey.org/viewer/jpeg-cutout?ra=${ra}&dec=${dec}&width=600&height=400&layer=ls-dr10&pixscale=${scale.toFixed(2)}`;
+          const proxyLegacyThumb = `https://images.weserv.nl/?url=${encodeURIComponent(directLegacyThumb)}`;
+          results.push({
+            source: 'Legacy Sky Survey (DESI / DECam)',
+            sourceTag: '🔭 Optical Master (CORS-Free)',
+            title: `${name} (Optical Deep Sky)`,
+            desc: `High-resolution optical color master from the Dark Energy Camera (DECam). ${coordBadge}. 100% untainted grading & export.`,
+            thumb: proxyLegacyThumb,
+            fullUrl: `https://www.legacysurvey.org/viewer/jpeg-cutout?ra=${ra}&dec=${dec}&width=2048&height=2048&layer=ls-dr10&pixscale=${(scale * 0.5).toFixed(3)}`,
+            width: 2048,
+            height: 2048,
+            mp: 4.2
+          });
+        }
+      }
+
+      return results;
+    }
+
+    /**
      * Unified Multi-Archive Search:
-     * Queries NASA Image Library and Wikimedia Commons Astronomy Archive in parallel.
+     * Queries Deep Sky Surveys (DECam / SDSS / Ultra-HD Masters), NASA Image Library, and Wikimedia Commons in parallel.
      */
     async function searchGlobalArchives(query, archiveSource = 'all') {
       nasaContainer.innerHTML = '';
       nasaSpinner.style.display = 'flex';
-      nasaResultsCount.textContent = 'Querying deep space archives...';
+
+      // Dynamically update section header, badge, and spinner text based on selected archive source
+      const archiveTitleEl = document.getElementById('archive-results-title');
+      const archiveBadgeEl = document.getElementById('archive-results-badge');
+      const nasaLoadingText = document.getElementById('nasa-loading-text');
+
+      if (archiveSource === 'surveys') {
+        if (archiveTitleEl) archiveTitleEl.innerHTML = '🔭 Deep Sky Survey Masters & Cutouts';
+        if (archiveBadgeEl) {
+          archiveBadgeEl.textContent = 'Observatory Cutouts';
+          archiveBadgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
+          archiveBadgeEl.style.color = '#10b981';
+          archiveBadgeEl.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+        }
+        if (nasaLoadingText) nasaLoadingText.textContent = 'Querying SDSS, Legacy Survey & Observatory Cutouts...';
+        nasaResultsCount.textContent = 'Querying deep sky surveys & cutouts...';
+      } else if (archiveSource === 'eso') {
+        if (archiveTitleEl) archiveTitleEl.innerHTML = '🏔️ ESO & VLT Deep Space Masters';
+        if (archiveBadgeEl) {
+          archiveBadgeEl.textContent = '16–116 MP Ultra-HD';
+          archiveBadgeEl.style.background = 'rgba(20, 184, 166, 0.2)';
+          archiveBadgeEl.style.color = '#2dd4bf';
+          archiveBadgeEl.style.borderColor = 'rgba(20, 184, 166, 0.35)';
+        }
+        if (nasaLoadingText) nasaLoadingText.textContent = 'Querying European Southern Observatory (VLT & ALMA)...';
+        nasaResultsCount.textContent = 'Querying ESO / VLT Ultra-HD masters...';
+      } else if (archiveSource === 'chandra') {
+        if (archiveTitleEl) archiveTitleEl.innerHTML = '⚡ Chandra X-Ray Deep Space Masters';
+        if (archiveBadgeEl) {
+          archiveBadgeEl.textContent = 'Pitch Black OLED #000000';
+          archiveBadgeEl.style.background = 'rgba(6, 182, 212, 0.2)';
+          archiveBadgeEl.style.color = '#22d3ee';
+          archiveBadgeEl.style.borderColor = 'rgba(6, 182, 212, 0.35)';
+        }
+        if (nasaLoadingText) nasaLoadingText.textContent = 'Querying Chandra X-Ray Observatory high-energy archives...';
+        nasaResultsCount.textContent = 'Querying Chandra high-energy X-ray targets...';
+      } else if (archiveSource === 'wikimedia') {
+        if (archiveTitleEl) archiveTitleEl.innerHTML = '🌌 Wikimedia Astrophotography Results';
+        if (archiveBadgeEl) {
+          archiveBadgeEl.textContent = 'Public Domain Ultra-HD';
+          archiveBadgeEl.style.background = 'rgba(139, 92, 246, 0.2)';
+          archiveBadgeEl.style.color = '#a78bfa';
+          archiveBadgeEl.style.borderColor = 'rgba(139, 92, 246, 0.35)';
+        }
+        if (nasaLoadingText) nasaLoadingText.textContent = 'Querying Wikimedia Commons Astrophotography...';
+        nasaResultsCount.textContent = 'Querying Wikimedia astrophotography...';
+      } else if (archiveSource === 'nasa') {
+        if (archiveTitleEl) archiveTitleEl.innerHTML = '🛸 NASA Deep Space Archive Results';
+        if (archiveBadgeEl) {
+          archiveBadgeEl.textContent = 'NASA Public API';
+          archiveBadgeEl.style.background = 'rgba(59, 130, 246, 0.2)';
+          archiveBadgeEl.style.color = '#60a5fa';
+          archiveBadgeEl.style.borderColor = 'rgba(59, 130, 246, 0.35)';
+        }
+        if (nasaLoadingText) nasaLoadingText.textContent = 'Querying NASA Image and Video Library...';
+        nasaResultsCount.textContent = 'Querying NASA image archives...';
+      } else {
+        if (archiveTitleEl) archiveTitleEl.innerHTML = '🌐 Unified Astronomical Archive Discoveries';
+        if (archiveBadgeEl) {
+          archiveBadgeEl.textContent = 'Surveys • ESO • Chandra • NASA';
+          archiveBadgeEl.style.background = 'rgba(59, 130, 246, 0.2)';
+          archiveBadgeEl.style.color = '#60a5fa';
+          archiveBadgeEl.style.borderColor = 'rgba(59, 130, 246, 0.35)';
+        }
+        if (nasaLoadingText) nasaLoadingText.textContent = 'Querying Sky Surveys, ESO, Chandra & NASA in parallel...';
+        nasaResultsCount.textContent = 'Querying multi-archive deep space observations...';
+      }
 
       const results = [];
 
       // 1. Fetch NASA Library
       const fetchNasa = async () => {
         try {
-          const url = `https://images-api.nasa.gov/search?q=${encodeURIComponent(query)}&media_type=image`;
+          const qClean = (query || '').trim();
+          const nasaQ = (!qClean || qClean === 'all' || qClean === 'surveys') ? 'deep space nebula' : qClean;
+          const url = `https://images-api.nasa.gov/search?q=${encodeURIComponent(nasaQ)}&media_type=image`;
           const resp = await fetch(url);
           if (!resp.ok) return [];
           const data = await resp.json();
@@ -1633,10 +2378,12 @@
         }
       };
 
-      // 2. Fetch Wikimedia Commons Deep Space (CORS-enabled via origin=*)
+      // 2. Fetch Wikimedia Commons Deep Space
       const fetchWikimedia = async () => {
         try {
-          const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}+astronomy&gsrnamespace=6&gsrlimit=12&prop=imageinfo&iiprop=url|size|mime&format=json&origin=*`;
+          const qClean = (query || '').trim();
+          const qSearch = (!qClean || qClean === 'all' || qClean === 'surveys') ? 'astronomy nebula galaxy' : `${qClean} astronomy`;
+          const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(qSearch + ' filetype:bitmap')}&gsrnamespace=6&gsrlimit=12&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=800&format=json&origin=*`;
           const resp = await fetch(url);
           if (!resp.ok) return [];
           const data = await resp.json();
@@ -1644,18 +2391,20 @@
           const items = [];
           for (const [pid, page] of Object.entries(pages)) {
             const info = page.imageinfo ? page.imageinfo[0] : {};
-            if (info.url && (info.mime === 'image/jpeg' || info.mime === 'image/png' || info.mime === 'image/webp')) {
+            const isWebImg = info.mime === 'image/jpeg' || info.mime === 'image/png' || info.mime === 'image/webp';
+            const isTiff = info.mime === 'image/tiff' && info.thumburl;
+            if (info.url && (isWebImg || isTiff)) {
               const w = info.width || 0;
               const h = info.height || 0;
               const mp = (w * h) / 1000000;
-              const cleanTitle = (page.title || '').replace(/^File:/i, '').replace(/\.(jpg|jpeg|png|webp)$/i, '').replace(/_/g, ' ');
+              const cleanTitle = (page.title || '').replace(/^File:/i, '').replace(/\.(jpg|jpeg|png|webp|tif|tiff)$/i, '').replace(/_/g, ' ');
               items.push({
                 source: 'Wikimedia Astrophotography',
                 sourceTag: mp >= 8.0 ? 'ESO / Hubble Ultra-HD' : 'Deep Space Archive',
                 title: cleanTitle,
                 desc: `Public domain astronomical master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP).`,
-                thumb: info.url,
-                fullUrl: info.url,
+                thumb: info.thumburl || info.url,
+                fullUrl: isTiff ? info.thumburl : info.url,
                 width: w,
                 height: h,
                 mp: mp
@@ -1669,17 +2418,195 @@
         }
       };
 
-      // Execute queries
-      if (archiveSource === 'nasa') {
+      // 3. Fetch Live Astronomical Survey Masters from Wikimedia
+      const fetchWikimediaSurveys = async () => {
+        const qClean = (query || '').trim();
+        if (!qClean || qClean === 'surveys' || qClean === 'all') return [];
+        try {
+          const stripped = qClean.replace(/\b(hubble|jwst|eso|vlt|survey)\b/gi, '').trim();
+          const searchQuery = (stripped ? `${stripped} (Hubble OR JWST OR ESO OR VLT)` : 'Hubble JWST nebula') + ' filetype:bitmap';
+          const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(searchQuery)}&gsrnamespace=6&gsrlimit=10&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=960&format=json&origin=*`;
+          const resp = await fetch(url);
+          if (!resp.ok) return [];
+          const data = await resp.json();
+          const pages = data.query ? data.query.pages : {};
+          const items = [];
+          for (const [pid, page] of Object.entries(pages)) {
+            const info = page.imageinfo ? page.imageinfo[0] : {};
+            const isWebImg = info.mime === 'image/jpeg' || info.mime === 'image/png' || info.mime === 'image/webp';
+            const isTiff = info.mime === 'image/tiff' && info.thumburl;
+            if (info.url && (isWebImg || isTiff)) {
+              const w = info.width || 0;
+              const h = info.height || 0;
+              const mp = (w * h) / 1000000;
+              const cleanTitle = (page.title || '').replace(/^File:/i, '').replace(/\.(jpg|jpeg|png|webp|tif|tiff)$/i, '').replace(/_/g, ' ');
+              items.push({
+                source: 'Observatory Survey Archive',
+                sourceTag: mp >= 10.0 ? `🔭 Ultra-HD Master (${mp.toFixed(1)} MP)` : '🔭 Survey Release',
+                title: cleanTitle,
+                desc: `Observatory survey archive master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). High dynamic contrast for OLED.`,
+                thumb: info.thumburl || info.url,
+                fullUrl: isTiff ? info.thumburl : info.url,
+                width: w,
+                height: h,
+                mp: mp
+              });
+            }
+          }
+          return items;
+        } catch (e) {
+          console.warn('Wikimedia survey fetch error:', e);
+          return [];
+        }
+      };
+
+      // 4. Fetch European Southern Observatory (ESO / VLT / ALMA) Ultra-HD Masters
+      const fetchEsoMasters = async () => {
+        const qClean = (query || '').trim();
+        try {
+          const stripped = qClean.replace(/\b(eso|vlt|observatory)\b/gi, '').trim();
+          let searchQuery = 'ESO VLT (nebula OR galaxy OR cluster OR space)';
+          if (stripped && stripped !== 'all' && stripped !== 'eso' && stripped !== 'surveys') {
+            searchQuery = `ESO ${stripped}`;
+          }
+          const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(searchQuery + ' filetype:bitmap')}&gsrnamespace=6&gsrlimit=12&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=800&format=json&origin=*`;
+          const resp = await fetch(url);
+          if (!resp.ok) return [];
+          const data = await resp.json();
+          const pages = data.query ? data.query.pages : {};
+          const items = [];
+          for (const [pid, page] of Object.entries(pages)) {
+            const info = page.imageinfo ? page.imageinfo[0] : {};
+            const isWebImg = info.mime === 'image/jpeg' || info.mime === 'image/png' || info.mime === 'image/webp';
+            const isTiff = info.mime === 'image/tiff' && info.thumburl;
+            if (info.url && (isWebImg || isTiff)) {
+              const w = info.width || 0;
+              const h = info.height || 0;
+              const mp = (w * h) / 1000000;
+              const cleanTitle = (page.title || '').replace(/^File:/i, '').replace(/\.(jpg|jpeg|png|webp|tif|tiff)$/i, '').replace(/_/g, ' ');
+              items.push({
+                source: 'European Southern Observatory',
+                sourceTag: mp >= 15.0 ? `🏔️ ESO Ultra-HD (${mp.toFixed(1)} MP)` : '🏔️ ESO / VLT Master',
+                title: cleanTitle,
+                desc: `European Southern Observatory (VLT / ALMA) deep-space master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). High dynamic contrast for AMOLED.`,
+                thumb: info.thumburl || info.url,
+                fullUrl: isTiff ? info.thumburl : info.url,
+                width: w,
+                height: h,
+                mp: mp
+              });
+            }
+          }
+          return items;
+        } catch (e) {
+          console.warn('ESO archive fetch error:', e);
+          return [];
+        }
+      };
+
+      // 5. Fetch Chandra X-Ray Observatory (Pure OLED Black Masters)
+      const fetchChandraXRay = async () => {
+        const qClean = (query || '').trim();
+        try {
+          const stripped = qClean.replace(/\b(chandra|x-ray|xray)\b/gi, '').trim();
+          let searchQuery = 'Chandra X-ray (pulsar OR supernova OR "black hole" OR jet OR cluster)';
+          if (stripped && stripped !== 'all' && stripped !== 'chandra' && stripped !== 'surveys') {
+            searchQuery = `Chandra ${stripped}`;
+          }
+          const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(searchQuery + ' filetype:bitmap')}&gsrnamespace=6&gsrlimit=12&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=800&format=json&origin=*`;
+          const resp = await fetch(url);
+          if (!resp.ok) return [];
+          const data = await resp.json();
+          const pages = data.query ? data.query.pages : {};
+          const items = [];
+          for (const [pid, page] of Object.entries(pages)) {
+            const info = page.imageinfo ? page.imageinfo[0] : {};
+            const isWebImg = info.mime === 'image/jpeg' || info.mime === 'image/png' || info.mime === 'image/webp';
+            const isTiff = info.mime === 'image/tiff' && info.thumburl;
+            if (info.url && (isWebImg || isTiff)) {
+              const w = info.width || 0;
+              const h = info.height || 0;
+              const mp = (w * h) / 1000000;
+              const cleanTitle = (page.title || '').replace(/^File:/i, '').replace(/\.(jpg|jpeg|png|webp|tif|tiff)$/i, '').replace(/_/g, ' ');
+              items.push({
+                source: 'Chandra X-Ray Observatory',
+                sourceTag: '⚡ Pure OLED Black (X-Ray)',
+                title: cleanTitle,
+                desc: `Chandra X-ray Observatory master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). 0-nit pitch black background with glowing relativistic emissions.`,
+                thumb: info.thumburl || info.url,
+                fullUrl: isTiff ? info.thumburl : info.url,
+                width: w,
+                height: h,
+                mp: mp
+              });
+            }
+          }
+          return items;
+        } catch (e) {
+          console.warn('Chandra archive fetch error:', e);
+          return [];
+        }
+      };
+
+      // Execute queries in parallel based on user filter
+      if (archiveSource === 'surveys') {
+        const [sItems, wSurveyItems] = await Promise.allSettled([
+          fetchSkySurveys(query),
+          fetchWikimediaSurveys()
+        ]);
+        if (sItems.status === 'fulfilled') results.push(...sItems.value);
+        if (wSurveyItems.status === 'fulfilled') {
+          wSurveyItems.value.forEach(item => {
+            if (!results.some(r => r.fullUrl === item.fullUrl || r.title.toLowerCase() === item.title.toLowerCase())) {
+              results.push(item);
+            }
+          });
+        }
+      } else if (archiveSource === 'eso') {
+        const esoItems = await fetchEsoMasters();
+        results.push(...esoItems);
+      } else if (archiveSource === 'chandra') {
+        const chandraItems = await fetchChandraXRay();
+        results.push(...chandraItems);
+      } else if (archiveSource === 'nasa') {
         const nItems = await fetchNasa();
         results.push(...nItems);
       } else if (archiveSource === 'wikimedia') {
         const wItems = await fetchWikimedia();
         results.push(...wItems);
       } else {
-        const [nRes, wRes] = await Promise.allSettled([fetchNasa(), fetchWikimedia()]);
+        // "all": Query Surveys, ESO, Chandra, NASA, and Wikimedia in parallel
+        const [sRes, esoRes, chandraRes, nRes, wRes] = await Promise.allSettled([
+          fetchSkySurveys(query),
+          fetchEsoMasters(),
+          fetchChandraXRay(),
+          fetchNasa(),
+          fetchWikimedia()
+        ]);
+        // 1. Put high-res Sky Survey cutouts and ESO / Chandra masters at top
+        if (sRes.status === 'fulfilled' && sRes.value.length > 0) results.push(...sRes.value);
+        if (esoRes.status === 'fulfilled' && esoRes.value.length > 0) {
+          esoRes.value.forEach(item => {
+            if (!results.some(r => r.fullUrl === item.fullUrl || r.title.toLowerCase() === item.title.toLowerCase())) {
+              results.push(item);
+            }
+          });
+        }
+        if (chandraRes.status === 'fulfilled' && chandraRes.value.length > 0) {
+          chandraRes.value.forEach(item => {
+            if (!results.some(r => r.fullUrl === item.fullUrl || r.title.toLowerCase() === item.title.toLowerCase())) {
+              results.push(item);
+            }
+          });
+        }
         if (nRes.status === 'fulfilled') results.push(...nRes.value);
-        if (wRes.status === 'fulfilled') results.push(...wRes.value);
+        if (wRes.status === 'fulfilled') {
+          wRes.value.forEach(item => {
+            if (!results.some(r => r.fullUrl === item.fullUrl || r.title.toLowerCase() === item.title.toLowerCase())) {
+              results.push(item);
+            }
+          });
+        }
       }
 
       nasaSpinner.style.display = 'none';
@@ -1689,7 +2616,7 @@
         nasaContainer.innerHTML = `
           <div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--text-muted); line-height: 1.6;">
             No astronomical discoveries found for "${query}".<br>
-            <span style="font-size: 13px;">Try searching popular targets like "Orion", "Andromeda", "Pillars of Creation", "Crab Nebula", or "Jupiter".</span>
+            <span style="font-size: 13px;">Try searching popular targets like "Orion", "Andromeda", "Pillars of Creation", "Crab Nebula", "Cassiopeia A", or "Black Hole".</span>
           </div>
         `;
         return;
@@ -1715,6 +2642,7 @@
               alt="${res.title}" 
               loading="lazy"
               onload="this.classList.add('loaded')"
+              onerror="if (!this.dataset.retried && this.src.startsWith('http')) { this.dataset.retried = '1'; this.src = 'https://images.weserv.nl/?url=' + encodeURIComponent(this.src) + '&w=640'; } else { this.classList.add('loaded'); const sk = this.parentElement.querySelector('.thumb-skeleton'); if (sk) sk.style.display = 'none'; }"
             >
             <div class="thumb-badges">
               <span class="badge-tag badge-res">${resBadgeStr}</span>
@@ -1817,6 +2745,71 @@
   }
 
   /**
+   * Generates a clean, intelligent, and uniquely timestamped filename for any export
+   * incorporating the active vista name, camera trajectory mode, resolution, grading state, and timestamp.
+   * Format: <vista-slug>_<motion-mode>_<detail>_<amoled|master>_<timestamp>.<ext>
+   * Example: "orion-nebula_odyssey_4k_amoled_20261112-220015.html"
+   */
+  function generateExportFilename(extension = 'html', extraDetail = '') {
+    // 1. Sanitize vista title into a clean readable slug
+    let rawTitle = (activeImageTitle || 'celestial-vista')
+      .toLowerCase()
+      .replace(/\(.*?\)/g, '') // remove parenthetical notes
+      .replace(/[^a-z0-9]+/g, '-') // slugify non-alphanumeric
+      .replace(/^-+|-+$/g, '');
+
+    if (!rawTitle) rawTitle = 'celestial-vista';
+    const vistaSlug = rawTitle.substring(0, 32);
+
+    // 2. Camera motion mode
+    const mode = (cameraEngine && cameraEngine.mode) ? cameraEngine.mode.toLowerCase() : 'odyssey';
+
+    // 3. AMOLED grade tag
+    const isGraded = isAmoledGraded || (activeRenderDrawable && activeRenderDrawable !== rawSourceImage);
+    const gradeTag = isGraded ? 'amoled' : 'master';
+
+    // 4. Timestamp: YYYYMMDD-HHmmss (guarantees zero collisions between consecutive downloads)
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+    // 5. Assemble filename parts
+    const parts = [vistaSlug, mode];
+    if (extraDetail) parts.push(extraDetail);
+    parts.push(gradeTag, dateStr);
+
+    const cleanExt = extension.replace(/^\./, '');
+    return `${parts.filter(Boolean).join('_')}.${cleanExt}`;
+  }
+
+  /**
+   * Updates placeholder text in export filename inputs with current vista & settings
+   */
+  function updateExportFilenamePlaceholders() {
+    const inputHtml = document.getElementById('input-export-html-filename');
+    const inputVideo = document.getElementById('input-export-video-filename');
+
+    const selRes = document.getElementById('select-export-html-res');
+    const resMode = selRes ? selRes.value : 'original';
+    const htmlDetail = resMode === 'original' ? currentPresetKey : resMode;
+
+    if (inputHtml && !inputHtml.value) {
+      inputHtml.placeholder = generateExportFilename('html', htmlDetail);
+    }
+
+    const qualitySelect = document.getElementById('select-record-quality');
+    const quality = qualitySelect ? qualitySelect.value : '1080p_fhd';
+    const durSelect = document.getElementById('select-record-duration');
+    const recordSec = durSelect ? durSelect.value : '180';
+    const formatSelect = document.getElementById('select-record-format');
+    const format = formatSelect ? formatSelect.value : 'mp4';
+
+    if (inputVideo && !inputVideo.value) {
+      inputVideo.placeholder = generateExportFilename(format, `${quality}_${recordSec}s`);
+    }
+  }
+
+  /**
    * Sets up UI Drawer Tabs (AMOLED Grading, Spline Editor, Export)
    */
   function setupStudioDrawers() {
@@ -1839,10 +2832,22 @@
 
           if (targetDrawerId === 'drawer-spline') {
             setTimeout(updateSplineEditorView, 50);
+          } else if (targetDrawerId === 'drawer-export') {
+            updateExportFilenamePlaceholders();
           }
         }
       });
     });
+
+    // Refresh filename suggestions when export settings change
+    const selExportHtmlRes = document.getElementById('select-export-html-res');
+    if (selExportHtmlRes) selExportHtmlRes.addEventListener('change', updateExportFilenamePlaceholders);
+    const selRecordFormat = document.getElementById('select-record-format');
+    if (selRecordFormat) selRecordFormat.addEventListener('change', updateExportFilenamePlaceholders);
+    const selRecordQuality = document.getElementById('select-record-quality');
+    if (selRecordQuality) selRecordQuality.addEventListener('change', updateExportFilenamePlaceholders);
+    const selRecordDuration = document.getElementById('select-record-duration');
+    if (selRecordDuration) selRecordDuration.addEventListener('change', updateExportFilenamePlaceholders);
 
     // Close buttons inside drawers
     document.querySelectorAll('.btn-close').forEach(btn => {
@@ -1852,81 +2857,197 @@
       });
     });
 
-    // AMOLED Grading: Sliders
-    const sliders = ['black-floor', 'knee-width', 'star-protect', 'contrast'];
+    // AMOLED Grading & Visual Enhancement Sliders
+    const sliders = ['black-floor', 'knee-width', 'star-protect', 'exposure', 'contrast', 'saturation', 'sharpness'];
     sliders.forEach(s => {
       const el = document.getElementById(`slider-${s}`);
       const valEl = document.getElementById(`val-${s}`);
       if (el && valEl) {
         el.addEventListener('input', (e) => {
           el.dataset.userModified = 'true';
-          valEl.textContent = (s === 'star-protect' ? `${e.target.value}%` : (s === 'contrast' ? `${e.target.value}x` : e.target.value));
+          const v = parseFloat(e.target.value);
+          if (s === 'star-protect' || s === 'sharpness') {
+            valEl.textContent = `${e.target.value}%`;
+          } else if (s === 'exposure') {
+            valEl.textContent = `${v > 0 ? '+' : ''}${v.toFixed(2)} EV`;
+          } else if (s === 'contrast' || s === 'saturation') {
+            valEl.textContent = `${v.toFixed(2)}x`;
+          } else {
+            valEl.textContent = e.target.value;
+          }
         });
       }
     });
 
-    // AMOLED Grading: Apply button
-    const btnBake = document.getElementById('btn-bake-grade');
-    if (btnBake) {
-      btnBake.addEventListener('click', applyInBrowserGrade);
+    // Section 1: AMOLED Grading Dedicated Buttons
+    const btnApplyAmoled = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
+    if (btnApplyAmoled) {
+      btnApplyAmoled.addEventListener('click', () => applyInBrowserGrade('amoled'));
+    }
+    const btnResetAmoled = document.getElementById('btn-reset-amoled');
+    if (btnResetAmoled) {
+      btnResetAmoled.addEventListener('click', resetAmoledSection);
     }
 
-    // AMOLED Grading: Reset / Undo button
+    // Section 2: Visual Adjustments Dedicated Buttons
+    const btnApplyAdjustments = document.getElementById('btn-apply-adjustments');
+    if (btnApplyAdjustments) {
+      btnApplyAdjustments.addEventListener('click', () => applyInBrowserGrade('adjustments'));
+    }
+    const btnResetAdjustments = document.getElementById('btn-reset-adjustments');
+    if (btnResetAdjustments) {
+      btnResetAdjustments.addEventListener('click', resetAdjustmentsSection);
+    }
+
+    // Master Revert Button: Reverts everything to pristine raw master
     const btnUndoGrade = document.getElementById('btn-undo-grade');
     if (btnUndoGrade) {
       btnUndoGrade.addEventListener('click', resetAmoledGrade);
     }
 
-    // Export: Standalone HTML Download
+    // Export: Standalone HTML Download (CORS resilient & automated untaint)
     const btnExportHtml = document.getElementById('btn-export-html');
     if (btnExportHtml) {
-      btnExportHtml.addEventListener('click', () => {
+      btnExportHtml.addEventListener('click', async () => {
         if (!imageLoaded || !activeRenderDrawable) return;
-
-        if (isCanvasTainted) {
-          showCorsHelperModal('export_html');
-          btnExportHtml.textContent = '💾 Download Standalone HTML';
-          return;
-        }
 
         btnExportHtml.textContent = '⏳ Compiling HTML...';
 
-        setTimeout(() => {
-          try {
-            // Convert active rendering drawable to base64 WebP
+        try {
+          const selResEl = document.getElementById('select-export-html-res');
+          const resMode = selResEl ? selResEl.value : 'original';
+          const origW = activeRenderDrawable.naturalWidth || activeRenderDrawable.width;
+          const origH = activeRenderDrawable.naturalHeight || activeRenderDrawable.height;
+
+          let dataUri = '';
+          const isGraded = isAmoledGraded || (activeRenderDrawable !== rawSourceImage);
+
+          // Case 1: Source is already a self-contained Data URI and un-graded
+          // If already a Data URI (e.g. bundled asset) and within safe resolution, pass through directly
+          if (rawSourceImage.src && rawSourceImage.src.startsWith('data:') && !isGraded && (resMode === 'original' || origW <= 5120)) {
+            dataUri = rawSourceImage.src;
+            console.log(`[Export] Direct self-contained Data URI pass-through: ${origW} x ${origH}`);
+          } else if (!isCanvasTainted) {
+            // Case 2: Untainted canvas (including blob URLs created from streaming download)
+            // Asynchronously extract high-performance WebP via canvas.toBlob()
+            // Never pass blob: URLs to standalone HTML (they expire/break when opened outside the session)!
+            let maxAllowedW = 5120; // 5K Ultra (17.5 MP) ceiling: ultra-crisp, instant ~350ms encode, no PC freeze
+            if (resMode === '8k') maxAllowedW = 8192;
+            else if (resMode === '5k') maxAllowedW = 5120;
+            else if (resMode === '4k') maxAllowedW = 3840;
+            else if (resMode === '1080p') maxAllowedW = 1920;
+            else if (resMode === 'original') maxAllowedW = (origW > 5120 ? 5120 : origW); // Cap gigapixel (13.5K) masters at 5K
+
+            const tw = Math.min(origW, maxAllowedW);
+            const th = Math.round(origH * (tw / origW));
+
+            btnExportHtml.textContent = `⏳ Compiling HTML (${tw}×${th})...`;
+            // Yield to browser UI thread so button updates cleanly
+            await new Promise(r => setTimeout(r, 40));
+
             const tempCanvas = document.createElement('canvas');
-            const tw = Math.min(5120, activeRenderDrawable.naturalWidth || activeRenderDrawable.width);
-            const th = Math.round((activeRenderDrawable.naturalHeight || activeRenderDrawable.height) * (tw / (activeRenderDrawable.naturalWidth || activeRenderDrawable.width)));
             tempCanvas.width = tw;
             tempCanvas.height = th;
             const tctx = tempCanvas.getContext('2d');
+            tctx.imageSmoothingEnabled = true;
+            tctx.imageSmoothingQuality = 'high';
             tctx.drawImage(activeRenderDrawable, 0, 0, tw, th);
-            const dataUri = tempCanvas.toDataURL('image/webp', 0.95);
 
-            // Get camera engine code string
-            const engineStr = CameraEngine.toString();
+            // Asynchronous non-blocking toBlob encoding off the main JS thread
+            const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/webp', 0.90));
+            if (blob) {
+              dataUri = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+              console.log(`[Export] Rendered async standalone HTML texture: ${tw} x ${th} (${(dataUri.length / (1024 * 1024)).toFixed(2)} MB, mode: ${resMode})`);
+            } else {
+              // Fallback to JPEG if WebP blob creation fails
+              const jpgBlob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/jpeg', 0.88));
+              if (jpgBlob) {
+                dataUri = await new Promise((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(jpgBlob);
+                });
+              } else {
+                dataUri = tempCanvas.toDataURL('image/jpeg', 0.85);
+              }
+            }
+          } else {
+            // Case 3: Tainted canvas (CORS restricted remote image)
+            // Attempt automated untainting via CORS proxy
+            if (rawSourceImage.src && (rawSourceImage.src.startsWith('http://') || rawSourceImage.src.startsWith('https://'))) {
+              btnExportHtml.textContent = '⏳ Untainting & Compiling...';
+              await new Promise(r => setTimeout(r, 40));
+              try {
+                let maxAllowedW = 5120;
+                if (resMode === '8k') maxAllowedW = 8192;
+                else if (resMode === '4k') maxAllowedW = 3840;
+                else if (resMode === '1080p') maxAllowedW = 1920;
 
-            const preset = PRESETS[currentPresetKey];
-            const filename = `deep_space_amoled_${currentPresetKey}.html`;
+                let proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(rawSourceImage.src)}&w=${maxAllowedW}&output=webp`;
 
-            Exporter.exportStandaloneHtml({
-              title: `Deep Space AMOLED Wallpaper (${preset.label})`,
-              badge: `${preset.label} &bull; Custom Loop`,
-              presetMode: cameraEngine.mode,
-              durationSec: loopDurationSec,
-              waypoints: cameraEngine.getWaypoints(),
-              imageDataUri: dataUri,
-              engineCode: engineStr,
-              filename: filename
-            });
-
-            btnExportHtml.textContent = '💾 Download Standalone HTML';
-          } catch (err) {
-            console.error('Export HTML failed:', err);
-            btnExportHtml.textContent = '💾 Download Standalone HTML';
-            alert('Could not export HTML: The image canvas is tainted by external cross-origin restrictions. Please upload or drag & drop the image file locally.');
+                const resp = await fetch(proxyUrl);
+                if (resp.ok) {
+                  const blob = await resp.blob();
+                  dataUri = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                  });
+                  console.log(`[Export] Clean Data URI generated via proxy untaint (${(dataUri.length / (1024 * 1024)).toFixed(2)} MB)`);
+                } else {
+                  throw new Error(`Proxy HTTP ${resp.status}`);
+                }
+              } catch (proxyErr) {
+                console.warn('[Export] Proxy untaint failed, using remote archive stream URL:', proxyErr.message);
+                if (rawSourceImage.src && !rawSourceImage.src.startsWith('blob:')) {
+                  dataUri = rawSourceImage.src;
+                } else {
+                  throw new Error('Canvas is tainted and cannot export offline standalone image.');
+                }
+              }
+            } else {
+              throw new Error('Image source is unavailable.');
+            }
           }
-        }, 50);
+
+          if (!dataUri || dataUri.startsWith('blob:')) {
+            throw new Error('Export error: Blob URLs cannot be exported to standalone HTML. Expected valid embedded Data URI.');
+          }
+
+          // Get camera engine code string
+          const engineStr = CameraEngine.toString();
+
+          const preset = PRESETS[currentPresetKey];
+          const inputHtml = document.getElementById('input-export-html-filename');
+          let filename = (inputHtml && inputHtml.value.trim()) 
+            ? inputHtml.value.trim() 
+            : generateExportFilename('html', resMode === 'original' ? currentPresetKey : resMode);
+          if (!filename.toLowerCase().endsWith('.html')) filename += '.html';
+
+          Exporter.exportStandaloneHtml({
+            title: `Deep Space AMOLED Wallpaper (${preset.label})`,
+            badge: `${preset.label} &bull; Custom Loop`,
+            presetMode: cameraEngine.mode,
+            durationSec: loopDurationSec,
+            waypoints: cameraEngine.getWaypoints(),
+            imageDataUri: dataUri,
+            engineCode: engineStr,
+            filename: filename
+          });
+
+          btnExportHtml.textContent = '💾 Download Standalone HTML';
+        } catch (err) {
+          console.error('Export HTML failed:', err);
+          btnExportHtml.textContent = '💾 Download Standalone HTML';
+          alert('Export could not complete: ' + err.message);
+        }
       });
     }
 
@@ -1955,6 +3076,12 @@
         const qualitySelect = document.getElementById('select-record-quality');
         const quality = qualitySelect ? qualitySelect.value : '1080p_fhd';
 
+        const inputVideo = document.getElementById('input-export-video-filename');
+        let filename = (inputVideo && inputVideo.value.trim()) 
+          ? inputVideo.value.trim() 
+          : generateExportFilename(format, `${quality}_${recordSec}s`);
+        if (!filename.toLowerCase().endsWith(`.${format}`)) filename += `.${format}`;
+
         isRecording = true;
         btnRecordVideo.textContent = '🔴 Recording...';
         recordBanner.classList.add('active');
@@ -1962,6 +3089,7 @@
         // High-performance deterministic 60 FPS recording with WebCodecs H.264 MP4 & MediaRecorder fallback
         Exporter.recordVideo({
           canvas,
+          filename: filename,
           renderFrameFn: (p, targetCanvas, targetCtx) => {
             renderFrame(p, targetCanvas || canvas, targetCtx || ctx);
             progress = p; // Keep scrubber & studio preview strictly in sync

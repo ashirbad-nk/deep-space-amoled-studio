@@ -1,0 +1,110 @@
+{
+  "orion": {
+    "title": "File:Orion Nebula - Hubble 2006 mosaic 18000.jpg",
+    "w": 18000,
+    "h": 18000,
+    "mp": 324.0,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/Orion_Nebula_-_Hubble_2006_mosaic_18000.jpg/960px-Orion_Nebula_-_Hubble_2006_mosaic_18000.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Orion_Nebula_-_Hubble_2006_mosaic_18000.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "Hubble ACS 2006 Gigapixel Mosaic"
+  },
+  "carina": {
+    "title": "File:NGC 3372a-full.jpg",
+    "w": 29566,
+    "h": 14321,
+    "mp": 423.4,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/NGC_3372a-full.jpg/960px-NGC_3372a-full.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/f/f8/NGC_3372a-full.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "ESO VLT / MPG WFI Gigapixel Survey"
+  },
+  "pillars": {
+    "title": "File:M16-29-06-2025-Luc Viatour.jpg",
+    "w": 13500,
+    "h": 9000,
+    "mp": 121.5,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/M16-29-06-2025-Luc_Viatour.jpg/960px-M16-29-06-2025-Luc_Viatour.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/5/52/M16-29-06-2025-Luc_Viatour.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "Hubble Heritage High-Definition"
+  },
+  "andromeda": {
+    "title": "File:Andromeda Galaxy M31 - Heic1502a Full resolution.jpg",
+    "w": 40000,
+    "h": 12788,
+    "mp": 511.5,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b3/Andromeda_Galaxy_M31_-_Heic1502a_Full_resolution.jpg/960px-Andromeda_Galaxy_M31_-_Heic1502a_Full_resolution.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/b/b3/Andromeda_Galaxy_M31_-_Heic1502a_Full_resolution.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "Hubble PHAT Ultra-HD Survey"
+  },
+  "whirlpool": {
+    "title": "File:Messier51.jpg",
+    "w": 11477,
+    "h": 7965,
+    "mp": 91.4,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Messier51.jpg/960px-Messier51.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/1/11/Messier51.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "Hubble ACS Grand Design Survey"
+  },
+  "sombrero": {
+    "title": "File:M104 ngc4594 sombrero galaxy hi-res.jpg",
+    "w": 11472,
+    "h": 6429,
+    "mp": 73.8,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5e/M104_ngc4594_sombrero_galaxy_hi-res.jpg/960px-M104_ngc4594_sombrero_galaxy_hi-res.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/5/5e/M104_ngc4594_sombrero_galaxy_hi-res.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "Hubble ACS Deep Space Observation"
+  },
+  "pleiades": {
+    "title": "File:M45-Les Pl\u00e9iades Hamois le 28-12-2024-Luc Viatour.jpg",
+    "w": 8137,
+    "h": 5441,
+    "mp": 44.3,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/M45-Les_Pl%C3%A9iades_Hamois_le_28-12-2024-Luc_Viatour.jpg/960px-M45-Les_Pl%C3%A9iades_Hamois_le_28-12-2024-Luc_Viatour.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/f/ff/M45-Les_Pl%C3%A9iades_Hamois_le_28-12-2024-Luc_Viatour.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "High-Definition Deep Sky Survey"
+  },
+  "crab": {
+    "title": "File:Crab Nebula.jpg",
+    "w": 3864,
+    "h": 3864,
+    "mp": 14.9,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Crab_Nebula.jpg/960px-Crab_Nebula.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/0/00/Crab_Nebula.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "Hubble Heritage 24-Frame Mosaic"
+  },
+  "ring": {
+    "title": "File:M57 The Ring Nebula.jpg",
+    "w": 3179,
+    "h": 3179,
+    "mp": 10.1,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Hubble_image_of_the_Ring_Nebula_%28Messier_57%29.jpg/960px-Hubble_image_of_the_Ring_Nebula_%28Messier_57%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Hubble_image_of_the_Ring_Nebula_%28Messier_57%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "Hubble WFC3 Ionized Gas Survey"
+  },
+  "helix": {
+    "title": "File:NGC7293 (2004).jpg",
+    "w": 6145,
+    "h": 6623,
+    "mp": 40.7,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b1/NGC7293_%282004%29.jpg/960px-NGC7293_%282004%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/b/b1/NGC7293_%282004%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "Hubble ACS & Blanco 4m Mosaic"
+  },
+  "tarantula": {
+    "title": "File:Tarantula Nebula TRAPPIST.jpg",
+    "w": 2016,
+    "h": 2038,
+    "mp": 4.1,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Tarantula_Nebula_TRAPPIST.jpg/960px-Tarantula_Nebula_TRAPPIST.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/8/80/Tarantula_Nebula_TRAPPIST.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "ESO TRAPPIST Deep Survey"
+  },
+  "hudf": {
+    "title": "File:NASA-HS201427a-HubbleUltraDeepField2014-20140603.jpg",
+    "w": 2300,
+    "h": 2100,
+    "mp": 4.8,
+    "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/69/NASA-HS201427a-HubbleUltraDeepField2014-20140603.jpg/960px-NASA-HS201427a-HubbleUltraDeepField2014-20140603.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "full": "https://upload.wikimedia.org/wikipedia/commons/6/69/NASA-HS201427a-HubbleUltraDeepField2014-20140603.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "obs": "Hubble 1-Million-Second Ultra Deep Field"
+  }
+}

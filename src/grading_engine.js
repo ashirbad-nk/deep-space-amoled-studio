@@ -68,16 +68,24 @@ class GradingEngine {
     const tKneeWidth = options.kneeWidth !== undefined ? options.kneeWidth : 24.0;
     const tKnee = tBlack + tKneeWidth;
     const starProtect = options.starProtect !== undefined ? options.starProtect : 0.85;
-    const contrast = options.contrast !== undefined ? options.contrast : 1.08;
+
+    // Visual enhancements
+    const exposure = options.exposure !== undefined ? options.exposure : 0.0; // in EV (-2.00 to +2.00)
+    const contrast = options.contrast !== undefined ? options.contrast : 1.08; // 0.50 to 2.00
+    const saturation = options.saturation !== undefined ? options.saturation : 1.0; // 0.00 to 2.00
+    const sharpness = options.sharpness !== undefined ? options.sharpness : 0.0; // 0.00 to 1.00
 
     const srcW = src.naturalWidth || src.width;
     const srcH = src.naturalHeight || src.height;
 
-    // Optional max dimension to prevent out-of-memory on mobile
-    const maxDim = options.maxDimension || 5120;
+    // Max dimension (0 or 'original' disables downsampling, preserving 100% full original resolution)
+    const maxDim = (options.maxDimension === 0 || options.maxDimension === 'original' || options.maxDimension === false)
+      ? 0
+      : (options.maxDimension !== undefined ? options.maxDimension : 0);
+
     let outW = srcW;
     let outH = srcH;
-    if (Math.max(srcW, srcH) > maxDim) {
+    if (maxDim > 0 && Math.max(srcW, srcH) > maxDim) {
       const scale = maxDim / Math.max(srcW, srcH);
       outW = Math.round(srcW * scale);
       outH = Math.round(srcH * scale);
@@ -86,6 +94,8 @@ class GradingEngine {
     targetCanvas.width = outW;
     targetCanvas.height = outH;
     const ctx = targetCanvas.getContext('2d', { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     // Draw source
     ctx.drawImage(src, 0, 0, outW, outH);
@@ -94,10 +104,45 @@ class GradingEngine {
     const len = d.length;
     const totalPixels = outW * outH;
 
-    let gradedBlackCount = 0;
-    const invKneeRange = 1.0 / Math.max(tKneeWidth, 1e-4);
+    // 1. Sharpness pass (Unsharp mask / Laplacian edge boost)
+    if (sharpness > 0.01 && outW > 2 && outH > 2) {
+      const srcCopy = new Uint8ClampedArray(d);
+      const k = sharpness * 0.45; // Edge amplification coefficient
+      const w4 = outW * 4;
 
-    // Precompute a 256-entry lookup table for the soft-knee factor for maximum speed!
+      for (let y = 1; y < outH - 1; y++) {
+        const rowIdx = y * w4;
+        for (let x = 1; x < outW - 1; x++) {
+          const idx = rowIdx + (x * 4);
+          for (let c = 0; c < 3; c++) {
+            const center = srcCopy[idx + c];
+            const up = srcCopy[idx - w4 + c];
+            const down = srcCopy[idx + w4 + c];
+            const left = srcCopy[idx - 4 + c];
+            const right = srcCopy[idx + 4 + c];
+            const laplacian = (center * 4) - up - down - left - right;
+            const sharpVal = center + laplacian * k;
+            d[idx + c] = sharpVal > 255 ? 255 : (sharpVal < 0 ? 0 : sharpVal);
+          }
+        }
+      }
+    }
+
+    // 2. Precompute 256-entry lookup table for Exposure & Contrast tone curve
+    // EV exposure: intensity multiplier = 2^exposure
+    const expMultiplier = Math.pow(2.0, exposure);
+    const invContrast = contrast > 0 ? (1.0 / contrast) : 1.0;
+    const lutTone = new Float32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let v = i * expMultiplier;
+      if (contrast !== 1.0 && v > 0) {
+        v = Math.pow(Math.min(255.0, v) / 255.0, invContrast) * 255.0;
+      }
+      lutTone[i] = Math.min(255.0, Math.max(0.0, v));
+    }
+
+    // 3. Precompute 256-entry lookup table for the soft-knee Hermite AMOLED black crushing
+    const invKneeRange = 1.0 / Math.max(tKneeWidth, 1e-4);
     const lutFactor = new Float32Array(256);
     for (let lum = 0; lum < 256; lum++) {
       if (lum <= tBlack) {
@@ -110,14 +155,26 @@ class GradingEngine {
       }
     }
 
-    // Process pixels in-place
-    for (let i = 0; i < len; i += 4) {
-      const r = d[i];
-      const g = d[i + 1];
-      const b = d[i + 2];
+    let gradedBlackCount = 0;
+    const hasSaturation = Math.abs(saturation - 1.0) > 0.01;
 
-      const lumInt = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-      let factor = lutFactor[Math.min(255, Math.max(0, lumInt))];
+    // 4. In-place pixel processing loop
+    for (let i = 0; i < len; i += 4) {
+      // Apply Tone Curve (Exposure + Contrast)
+      let r = lutTone[d[i]];
+      let g = lutTone[d[i + 1]];
+      let b = lutTone[d[i + 2]];
+
+      // Apply Saturation if needed
+      if (hasSaturation) {
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = lum + (r - lum) * saturation;
+        g = lum + (g - lum) * saturation;
+        b = lum + (b - lum) * saturation;
+      }
+
+      const lumInt = Math.min(255, Math.max(0, Math.round(0.299 * r + 0.587 * g + 0.114 * b)));
+      let factor = lutFactor[lumInt];
 
       // Pinpoint star protection: if pixel has high saturation or intensity spike
       if (factor < 0.6 && starProtect > 0) {
@@ -135,19 +192,9 @@ class GradingEngine {
         d[i + 2] = 0;
         gradedBlackCount++;
       } else {
-        let nr = r * factor;
-        let ng = g * factor;
-        let nb = b * factor;
-
-        if (contrast !== 1.0) {
-          nr = Math.pow(nr / 255.0, 1.0 / contrast) * 255.0;
-          ng = Math.pow(ng / 255.0, 1.0 / contrast) * 255.0;
-          nb = Math.pow(nb / 255.0, 1.0 / contrast) * 255.0;
-        }
-
-        d[i] = Math.min(255, Math.max(0, Math.round(nr)));
-        d[i + 1] = Math.min(255, Math.max(0, Math.round(ng)));
-        d[i + 2] = Math.min(255, Math.max(0, Math.round(nb)));
+        d[i] = Math.min(255, Math.max(0, Math.round(r * factor)));
+        d[i + 1] = Math.min(255, Math.max(0, Math.round(g * factor)));
+        d[i + 2] = Math.min(255, Math.max(0, Math.round(b * factor)));
       }
     }
 
