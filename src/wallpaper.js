@@ -734,9 +734,37 @@
     }
   }
 
+  /**
+   * Dynamically adjusts the Radar Mini-Map canvas and container aspect ratio
+   * to strictly match the input image's native aspect ratio (landscape, square, or vertical portrait).
+   */
+  function updateRadarDimensions() {
+    if (!radarCanvas) return;
+    const radarContainer = document.getElementById('radar-container');
+    const imgW = (activeRenderDrawable && (activeRenderDrawable.naturalWidth || activeRenderDrawable.width)) || (rawSourceImage && rawSourceImage.naturalWidth) || 16;
+    const imgH = (activeRenderDrawable && (activeRenderDrawable.naturalHeight || activeRenderDrawable.height)) || (rawSourceImage && rawSourceImage.naturalHeight) || 9;
+    const aspect = imgW / imgH;
+
+    let rw, rh;
+    if (aspect >= 1.0) {
+      rw = 210;
+      rh = Math.max(70, Math.min(210, Math.round(rw / aspect)));
+    } else {
+      rh = 210;
+      rw = Math.max(85, Math.min(210, Math.round(rh * aspect)));
+    }
+
+    radarCanvas.width = rw;
+    radarCanvas.height = rh;
+
+    if (radarContainer) {
+      radarContainer.style.width = `${rw}px`;
+      radarContainer.style.height = `${rh}px`;
+    }
+  }
+
   function drawRadarBackground() {
-    radarCanvas.width = 200;
-    radarCanvas.height = 120;
+    updateRadarDimensions();
   }
 
   function renderRadar() {
@@ -794,7 +822,11 @@
       // Telemetry readout
       const pctX = Math.round((cam.x / imgW) * 100);
       const pctY = Math.round((cam.y / imgH) * 100);
-      radarTelemetry.textContent = `POS: ${pctX}%, ${pctY}% | ZOOM: ${cam.zoom.toFixed(2)}x`;
+      if (rw < 140) {
+        radarTelemetry.textContent = `${pctX}%, ${pctY}% | ${cam.zoom.toFixed(1)}x`;
+      } else {
+        radarTelemetry.textContent = `POS: ${pctX}%, ${pctY}% | ZOOM: ${cam.zoom.toFixed(2)}x`;
+      }
     }
   }
 
@@ -913,15 +945,32 @@
   }
 
   /**
-   * Updates Spline Editor Canvas with draggable waypoints
+   * Updates Spline Editor Canvas with draggable waypoints matching input image aspect ratio
    */
   function updateSplineEditorView() {
     if (!editorCanvas || !editorCtx || !cameraEngine) return;
 
-    const ew = editorCanvas.clientWidth || 400;
-    const eh = editorCanvas.clientHeight || 220;
+    const editorContainer = document.getElementById('editor-canvas-container');
+    const imgW = (activeRenderDrawable && (activeRenderDrawable.naturalWidth || activeRenderDrawable.width)) || (rawSourceImage && rawSourceImage.naturalWidth) || 16;
+    const imgH = (activeRenderDrawable && (activeRenderDrawable.naturalHeight || activeRenderDrawable.height)) || (rawSourceImage && rawSourceImage.naturalHeight) || 9;
+    const aspect = imgW / imgH;
+
+    const maxW = (editorContainer ? editorContainer.clientWidth : 360) || 360;
+    const maxH = 240;
+
+    let ew, eh;
+    if (aspect >= 1.0) {
+      ew = maxW;
+      eh = Math.max(120, Math.min(maxH, Math.round(ew / aspect)));
+    } else {
+      eh = maxH;
+      ew = Math.max(100, Math.min(maxW, Math.round(eh * aspect)));
+    }
+
     editorCanvas.width = ew;
     editorCanvas.height = eh;
+    editorCanvas.style.width = `${ew}px`;
+    editorCanvas.style.height = `${eh}px`;
 
     editorCtx.fillStyle = '#06080c';
     editorCtx.fillRect(0, 0, ew, eh);
