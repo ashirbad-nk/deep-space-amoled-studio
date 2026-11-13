@@ -1095,16 +1095,16 @@
   }
 
   /**
-   * Applies client-side in-browser AMOLED true-black grading
+   * Applies client-side in-browser AMOLED true-black grading & visual enhancements
    */
-  function applyInBrowserGrade() {
+  function applyInBrowserGrade(triggerType = 'amoled', isPreview = false) {
     if (!imageLoaded || !rawSourceImage) return;
 
-    const btnBake = document.getElementById('btn-bake-grade');
+    const btnBake = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
 
     if (isCanvasTainted) {
       if (rawSourceImage.src && (rawSourceImage.src.startsWith('http://') || rawSourceImage.src.startsWith('https://'))) {
-        if (btnBake) btnBake.textContent = '⏳ Untainting Source...';
+        if (btnBake && !isPreview) btnBake.textContent = '⏳ Untainting Source...';
         fetch(`https://images.weserv.nl/?url=${encodeURIComponent(rawSourceImage.src)}&output=jpg`)
           .then(res => {
             if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1114,22 +1114,26 @@
             const cleanBlobUrl = URL.createObjectURL(blob);
             console.log('[Studio] Auto-untainted remote source for AMOLED grading!');
             loadImageSource(cleanBlobUrl, null, activeImageTitle, () => {
-              setTimeout(applyInBrowserGrade, 50);
+              setTimeout(() => applyInBrowserGrade(triggerType, isPreview), 50);
             }, false);
           })
           .catch(err => {
             console.warn('[Studio] Auto-untaint for grading failed, showing assistant:', err.message);
-            showCorsHelperModal('grade');
-            if (btnBake) btnBake.textContent = '✨ Apply & Bake AMOLED Grade';
+            if (!isPreview) {
+              showCorsHelperModal('grade');
+              if (btnBake) btnBake.textContent = '🖤 Apply AMOLED Grade';
+            }
           });
         return;
       }
 
-      showCorsHelperModal('grade');
-      const btnAmoled = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
-      const btnAdj = document.getElementById('btn-apply-adjustments');
-      if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade';
-      if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments';
+      if (!isPreview) {
+        showCorsHelperModal('grade');
+        const btnAmoled = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
+        const btnAdj = document.getElementById('btn-apply-adjustments');
+        if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade';
+        if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments';
+      }
       return;
     }
 
@@ -1148,21 +1152,23 @@
     const btnAmoled = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
     const btnAdj = document.getElementById('btn-apply-adjustments');
 
-    if (triggerType === 'amoled') {
-      if (btnAmoled) btnAmoled.textContent = '⏳ Baking AMOLED...';
-    } else if (triggerType === 'adjustments') {
-      if (btnAdj) btnAdj.textContent = '⏳ Processing Pixels...';
-    } else {
-      if (btnAmoled) btnAmoled.textContent = '⏳ Processing...';
-      if (btnAdj) btnAdj.textContent = '⏳ Processing...';
+    if (!isPreview) {
+      if (triggerType === 'amoled') {
+        if (btnAmoled) btnAmoled.textContent = '⏳ Baking AMOLED...';
+      } else if (triggerType === 'adjustments') {
+        if (btnAdj) btnAdj.textContent = '⏳ Processing Pixels...';
+      } else {
+        if (btnAmoled) btnAmoled.textContent = '⏳ Processing...';
+        if (btnAdj) btnAdj.textContent = '⏳ Processing...';
+      }
     }
 
     setTimeout(async () => {
       try {
         const selResEl = document.getElementById('select-export-html-res');
         const resMode = selResEl ? selResEl.value : '5k';
-        // Safe 5K (5120px) ceiling for CPU pixel processing to prevent UI freezes on 100MP+ images
-        const maxDim = (resMode === '8k') ? 8192 : ((resMode === '4k') ? 3840 : ((resMode === '1080p') ? 1920 : 5120));
+        // Fast 2560px preview during live slider dragging, full resolution ceiling on bake
+        const maxDim = isPreview ? 2560 : ((resMode === '8k') ? 8192 : ((resMode === '4k') ? 3840 : ((resMode === '1080p') ? 1920 : 5120)));
 
         const stats = gradingEngine.applyGrade(rawSourceImage, bakedGradedCanvas, {
           blackFloor: floor,
@@ -1205,6 +1211,7 @@
         const dh = activeRenderDrawable.height || activeRenderDrawable.naturalHeight;
         cameraEngine.setImageDimensions(dw, dh);
         drawRadarBackground();
+        renderFrame(); // Instantly redraw viewport
 
         const elGraded = document.getElementById('stat-graded-black');
         if (elGraded) elGraded.textContent = `${stats.blackPercentage}%`;
@@ -1215,34 +1222,38 @@
           elSavings.textContent = `~${estSavings}%`;
         }
 
-        if (triggerType === 'amoled') {
-          if (btnAmoled) {
-            btnAmoled.textContent = '✓ AMOLED Grade Baked!';
-            setTimeout(() => { if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade'; }, 1500);
-          }
-        } else if (triggerType === 'adjustments') {
-          if (btnAdj) {
-            btnAdj.textContent = '✓ Adjustments Applied!';
-            setTimeout(() => { if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments'; }, 1500);
-          }
-        } else {
-          if (btnAmoled) {
-            btnAmoled.textContent = '✓ Applied!';
-            setTimeout(() => { if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade'; }, 1500);
-          }
-          if (btnAdj) {
-            btnAdj.textContent = '✓ Applied!';
-            setTimeout(() => { if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments'; }, 1500);
+        if (!isPreview) {
+          if (triggerType === 'amoled') {
+            if (btnAmoled) {
+              btnAmoled.textContent = '✓ AMOLED Grade Baked!';
+              setTimeout(() => { if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade'; }, 1500);
+            }
+          } else if (triggerType === 'adjustments') {
+            if (btnAdj) {
+              btnAdj.textContent = '✓ Adjustments Applied!';
+              setTimeout(() => { if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments'; }, 1500);
+            }
+          } else {
+            if (btnAmoled) {
+              btnAmoled.textContent = '✓ Applied!';
+              setTimeout(() => { if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade'; }, 1500);
+            }
+            if (btnAdj) {
+              btnAdj.textContent = '✓ Applied!';
+              setTimeout(() => { if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments'; }, 1500);
+            }
           }
         }
-        console.log(`[Studio] ${triggerType} baked into GPU texture: ${stats.blackPercentage}% true black in ${stats.elapsedMs}ms`);
+        console.log(`[Studio] ${triggerType} ${isPreview ? 'preview' : 'baked'} into GPU texture: ${stats.blackPercentage}% true black in ${stats.elapsedMs}ms`);
       } catch (err) {
         console.error('Grading failed:', err);
-        if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade';
-        if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments';
-        alert('Could not grade pixels: This external image does not allow direct pixel manipulation due to CORS. Please download the image and drag-and-drop it into the app.');
+        if (!isPreview) {
+          if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade';
+          if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments';
+          alert('Could not grade pixels: This external image does not allow direct pixel manipulation due to CORS. Please download the image and drag-and-drop it into the app.');
+        }
       }
-    }, 20);
+    }, isPreview ? 0 : 20);
   }
 
   /**
@@ -1308,6 +1319,7 @@
     drawRadarBackground();
     updateSplineEditorView();
     runAutoGradeTelemetry();
+    renderFrame();
 
     // Reset all 7 sliders & labels to default states
     const resetVals = {
@@ -2857,11 +2869,22 @@
       });
     });
 
-    // AMOLED Grading & Visual Enhancement Sliders
+    // AMOLED Grading & Visual Enhancement Sliders with Debounced Live Preview
+    let gradeDebounceTimer = null;
+    const triggerDebouncedGrade = (type = 'adjustments', isFast = true) => {
+      if (gradeDebounceTimer) clearTimeout(gradeDebounceTimer);
+      gradeDebounceTimer = setTimeout(() => {
+        if (imageLoaded && rawSourceImage && !isCanvasTainted) {
+          applyInBrowserGrade(type, isFast);
+        }
+      }, 80);
+    };
+
     const sliders = ['black-floor', 'knee-width', 'star-protect', 'exposure', 'contrast', 'saturation', 'sharpness'];
     sliders.forEach(s => {
       const el = document.getElementById(`slider-${s}`);
       const valEl = document.getElementById(`val-${s}`);
+      const isAmoled = (s === 'black-floor' || s === 'knee-width' || s === 'star-protect');
       if (el && valEl) {
         el.addEventListener('input', (e) => {
           el.dataset.userModified = 'true';
@@ -2875,6 +2898,15 @@
           } else {
             valEl.textContent = e.target.value;
           }
+          // Real-time live visual feedback on viewport canvas
+          triggerDebouncedGrade(isAmoled ? 'amoled' : 'adjustments', true);
+        });
+
+        // When user finishes dragging the slider, bake at full quality
+        el.addEventListener('change', () => {
+          if (imageLoaded && rawSourceImage && !isCanvasTainted) {
+            applyInBrowserGrade(isAmoled ? 'amoled' : 'adjustments', false);
+          }
         });
       }
     });
@@ -2882,7 +2914,7 @@
     // Section 1: AMOLED Grading Dedicated Buttons
     const btnApplyAmoled = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
     if (btnApplyAmoled) {
-      btnApplyAmoled.addEventListener('click', () => applyInBrowserGrade('amoled'));
+      btnApplyAmoled.addEventListener('click', () => applyInBrowserGrade('amoled', false));
     }
     const btnResetAmoled = document.getElementById('btn-reset-amoled');
     if (btnResetAmoled) {
@@ -2892,7 +2924,7 @@
     // Section 2: Visual Adjustments Dedicated Buttons
     const btnApplyAdjustments = document.getElementById('btn-apply-adjustments');
     if (btnApplyAdjustments) {
-      btnApplyAdjustments.addEventListener('click', () => applyInBrowserGrade('adjustments'));
+      btnApplyAdjustments.addEventListener('click', () => applyInBrowserGrade('adjustments', false));
     }
     const btnResetAdjustments = document.getElementById('btn-reset-adjustments');
     if (btnResetAdjustments) {

@@ -181,7 +181,7 @@ class GradingEngine {
         const maxCh = Math.max(r, g, b);
         const minCh = Math.min(r, g, b);
         const sat = maxCh > 0 ? (maxCh - minCh) / maxCh : 0;
-        if (maxCh > 45 || sat > 0.35) {
+        if (maxCh >= 45 && (maxCh >= 65 || sat >= 0.35)) {
           factor = Math.max(factor, starProtect * 0.7);
         }
       }
