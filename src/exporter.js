@@ -332,6 +332,7 @@ ${recipeJson}
     speedMultiplier = 1.0,
     startProgress = 0,
     quality = '1080p_fhd',
+    filename = null,
     checkAbort = null,
     onProgress = null,
     onFinish = null,
@@ -493,11 +494,11 @@ ${recipeJson}
 
     const blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
     const defaultFilename = `deep_space_amoled_loop_${encW}x${encH}_${durationSec}s.mp4`;
-    const filename = options.filename ? (options.filename.endsWith('.mp4') ? options.filename : `${options.filename}.mp4`) : defaultFilename;
-    this.downloadBlob(blob, filename);
+    const finalFilename = filename ? (filename.endsWith('.mp4') ? filename : `${filename}.mp4`) : defaultFilename;
+    this.downloadBlob(blob, finalFilename);
 
-    if (onFinish) onFinish(blob, filename);
-    return { blob, filename };
+    if (onFinish) onFinish(blob, finalFilename);
+    return { blob, filename: finalFilename };
   }
 
   /**

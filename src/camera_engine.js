@@ -419,38 +419,44 @@ class CameraEngine {
   solveCamera(progress, viewportW, viewportH) {
     const raw = this.samplePath(progress);
 
+    // Guard against 0 or negative dimensions (e.g. collapsed or minimized window)
+    const vw = Math.max(1, viewportW || 1);
+    const vh = Math.max(1, viewportH || 1);
+    const iw = Math.max(1, this.imgW || 1);
+    const ih = Math.max(1, this.imgH || 1);
+
     // 1. Calculate Base "Cover" scale for this aspect ratio
-    const scaleCover = Math.max(viewportW / this.imgW, viewportH / this.imgH);
+    const scaleCover = Math.max(vw / iw, vh / ih);
 
     // 2. Effective scale incorporates waypoint zoom (clamped to at least 1.0)
-    const effectiveZ = Math.max(1.0, raw.z);
-    const effectiveScale = scaleCover * effectiveZ;
+    const effectiveZ = Math.max(1.0, raw.z || 1.0);
+    const effectiveScale = Math.max(1e-4, scaleCover * effectiveZ);
 
-    // 3. Visible rectangle in master image coordinates (guaranteed <= imgW and <= imgH)
-    const viewW = Math.min(this.imgW, viewportW / effectiveScale);
-    const viewH = Math.min(this.imgH, viewportH / effectiveScale);
+    // 3. Visible rectangle in master image coordinates (guaranteed <= iw and <= ih)
+    const viewW = Math.max(1, Math.min(iw, vw / effectiveScale));
+    const viewH = Math.max(1, Math.min(ih, vh / effectiveScale));
 
     // 4. Safe camera center limits (Zero bleed / Zero letterbox invariant)
     const minCenterX = viewW / 2;
-    const maxCenterX = Math.max(minCenterX, this.imgW - viewW / 2);
+    const maxCenterX = Math.max(minCenterX, iw - viewW / 2);
     const minCenterY = viewH / 2;
-    const maxCenterY = Math.max(minCenterY, this.imgH - viewH / 2);
+    const maxCenterY = Math.max(minCenterY, ih - viewH / 2);
 
     // Target center in pixel coordinates
-    const targetCenterX = raw.x * this.imgW;
-    const targetCenterY = raw.y * this.imgH;
+    const targetCenterX = (raw.x !== undefined ? raw.x : 0.5) * iw;
+    const targetCenterY = (raw.y !== undefined ? raw.y : 0.5) * ih;
 
     // Clamped center
     const clampedCenterX = Math.max(minCenterX, Math.min(maxCenterX, targetCenterX));
     const clampedCenterY = Math.max(minCenterY, Math.min(maxCenterY, targetCenterY));
 
     // Visible bounding box in image coordinates (strictly inside image bounds)
-    const rectX = Math.max(0, Math.min(this.imgW - viewW, clampedCenterX - viewW / 2));
-    const rectY = Math.max(0, Math.min(this.imgH - viewH, clampedCenterY - viewH / 2));
+    const rectX = Math.max(0, Math.min(iw - viewW, clampedCenterX - viewW / 2));
+    const rectY = Math.max(0, Math.min(ih - viewH, clampedCenterY - viewH / 2));
 
     return {
       center: { x: clampedCenterX, y: clampedCenterY },
-      normalizedCenter: { x: clampedCenterX / this.imgW, y: clampedCenterY / this.imgH },
+      normalizedCenter: { x: clampedCenterX / iw, y: clampedCenterY / ih },
       scale: effectiveScale,
       relativeZoom: effectiveZ,
       viewSize: { w: viewW, h: viewH },

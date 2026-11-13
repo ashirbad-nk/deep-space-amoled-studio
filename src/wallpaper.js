@@ -459,6 +459,15 @@
   let isHudManuallyHidden = false;
   let hudHideTimeout = null;
 
+  // Memory & Concurrency Management
+  let activeBlobUrl = null;
+  let activeGradedBlobUrl = null;
+  let currentLoadId = 0;
+  let isGradingActive = false;
+  let pendingGradeRequest = null;
+  const radarStaticCanvas = document.createElement('canvas');
+  const radarStaticCtx = radarStaticCanvas.getContext('2d');
+
   /**
    * Applies and synchronizes loop duration across state, camera engine, UI, and timeline.
    */
@@ -830,9 +839,13 @@
         }
       });
 
-      const blobUrl = URL.createObjectURL(blob);
+      if (activeBlobUrl) {
+        try { URL.revokeObjectURL(activeBlobUrl); } catch (e) {}
+        activeBlobUrl = null;
+      }
+      activeBlobUrl = URL.createObjectURL(blob);
       // NOTE: Do NOT hide modal here. loadImageSource's onload hides it cleanly when rendering is primed!
-      loadImageSource(blobUrl, fallbackUrl, title, onComplete, false);
+      loadImageSource(activeBlobUrl, fallbackUrl, title, onComplete, false);
     } catch (err) {
       if (err && (err.name === 'AbortError' || (err.message && err.message.includes('aborted')))) {
         console.log('[Studio] Image download cancelled by user.');
@@ -1063,6 +1076,7 @@
    * Keeps the loading modal active until onload fires, eliminating the premature close bug on large images.
    */
   async function loadImageSource(url, fallbackUrl = null, title = 'Custom Celestial Image', onComplete = null, forceNoCors = false) {
+    const thisLoadId = ++currentLoadId;
     imageLoaded = false;
     isAmoledGraded = false;
     activeImageTitle = title;
@@ -1095,6 +1109,7 @@
     }
 
     rawSourceImage.onload = () => {
+      if (thisLoadId !== currentLoadId) return; // Stale request discarded
       // HIDE MODAL NOW! The image is decoded and ready for the 60 FPS canvas!
       const modal = document.getElementById('modal-image-fetch');
       if (modal) modal.classList.add('hidden');
@@ -1105,6 +1120,10 @@
       imageLoaded = true;
       if (activeRenderDrawable && typeof ImageBitmap !== 'undefined' && activeRenderDrawable instanceof ImageBitmap) {
         try { activeRenderDrawable.close(); } catch (e) {}
+      }
+      if (activeGradedBlobUrl) {
+        try { URL.revokeObjectURL(activeGradedBlobUrl); } catch (e) {}
+        activeGradedBlobUrl = null;
       }
       activeRenderDrawable = rawSourceImage;
 
@@ -1436,7 +1455,7 @@
     targetCtx.fillRect(0, 0, vw, vh);
 
     targetCtx.imageSmoothingEnabled = true;
-    targetCtx.imageSmoothingQuality = 'high';
+    targetCtx.imageSmoothingQuality = 'medium';
 
     targetCtx.drawImage(
       activeRenderDrawable,
@@ -1510,41 +1529,56 @@
 
   function drawRadarBackground() {
     updateRadarDimensions();
-  }
-
-  function renderRadar() {
     const rw = radarCanvas.width;
     const rh = radarCanvas.height;
+    if (rw <= 0 || rh <= 0) return;
 
-    radarCtx.fillStyle = '#06080c';
-    radarCtx.fillRect(0, 0, rw, rh);
+    radarStaticCanvas.width = rw;
+    radarStaticCanvas.height = rh;
+
+    radarStaticCtx.fillStyle = '#06080c';
+    radarStaticCtx.fillRect(0, 0, rw, rh);
 
     if (imageLoaded && activeRenderDrawable) {
-      radarCtx.globalAlpha = 0.45;
-      radarCtx.drawImage(activeRenderDrawable, 0, 0, rw, rh);
-      radarCtx.globalAlpha = 1.0;
+      radarStaticCtx.globalAlpha = 0.45;
+      radarStaticCtx.imageSmoothingEnabled = true;
+      radarStaticCtx.imageSmoothingQuality = 'medium';
+      radarStaticCtx.drawImage(activeRenderDrawable, 0, 0, rw, rh);
+      radarStaticCtx.globalAlpha = 1.0;
+    }
 
-      // Draw Spline Trajectory Path
-      radarCtx.beginPath();
-      radarCtx.strokeStyle = 'rgba(0, 229, 255, 0.55)';
-      radarCtx.lineWidth = 1.5;
+    if (cameraEngine) {
+      radarStaticCtx.beginPath();
+      radarStaticCtx.strokeStyle = 'rgba(0, 229, 255, 0.55)';
+      radarStaticCtx.lineWidth = 1.5;
 
       for (let i = 0; i <= 60; i++) {
         const u = i / 60;
         const pt = cameraEngine.samplePath(u);
         const px = pt.x * rw;
         const py = pt.y * rh;
-        if (i === 0) radarCtx.moveTo(px, py);
-        else radarCtx.lineTo(px, py);
+        if (i === 0) radarStaticCtx.moveTo(px, py);
+        else radarStaticCtx.lineTo(px, py);
       }
-      radarCtx.closePath();
-      radarCtx.stroke();
+      radarStaticCtx.closePath();
+      radarStaticCtx.stroke();
+    }
+  }
 
+  function renderRadar() {
+    const rw = radarCanvas.width;
+    const rh = radarCanvas.height;
+    if (rw <= 0 || rh <= 0) return;
+
+    // Fast copy from pre-baked static canvas (zero texture rescaling, zero spline math at 60 FPS!)
+    radarCtx.drawImage(radarStaticCanvas, 0, 0);
+
+    if (imageLoaded && activeRenderDrawable && cameraEngine) {
       // Draw Camera Frustum
       const cam = cameraEngine.solveCamera(progress, canvas.width, canvas.height);
       const r = cam.sourceRect;
-      const imgW = activeRenderDrawable.naturalWidth || activeRenderDrawable.width;
-      const imgH = activeRenderDrawable.naturalHeight || activeRenderDrawable.height;
+      const imgW = activeRenderDrawable.naturalWidth || activeRenderDrawable.width || 1;
+      const imgH = activeRenderDrawable.naturalHeight || activeRenderDrawable.height || 1;
 
       const fx = (r.x / imgW) * rw;
       const fy = (r.y / imgH) * rh;
@@ -1597,9 +1631,17 @@
   function applyInBrowserGrade(triggerType = 'amoled', isPreview = false) {
     if (!imageLoaded || !rawSourceImage) return;
 
+    // Concurrency Lock: prevent multiple heavy grading tasks from thrashing CPU and freezing the PC
+    if (isGradingActive) {
+      pendingGradeRequest = { triggerType, isPreview };
+      return;
+    }
+    isGradingActive = true;
+
     const btnBake = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
 
     if (isCanvasTainted) {
+      isGradingActive = false;
       if (rawSourceImage.src && (rawSourceImage.src.startsWith('http://') || rawSourceImage.src.startsWith('https://'))) {
         if (btnBake && !isPreview) btnBake.textContent = '⏳ Untainting Source...';
         fetch(`https://images.weserv.nl/?url=${encodeURIComponent(rawSourceImage.src)}&output=jpg`)
@@ -1665,10 +1707,13 @@
 
     setTimeout(async () => {
       try {
+        // Yield to browser UI thread before running pixel operations
+        await new Promise(r => setTimeout(r, 16));
+
         const selResEl = document.getElementById('select-export-html-res');
         const resMode = selResEl ? selResEl.value : 'original';
-        // Fast 2560px preview during live slider dragging, full 8K ceiling on bake for Full Master / 8K
-        const maxDim = isPreview ? 2560 : ((resMode === '8k' || resMode === 'original') ? 8192 : ((resMode === '4k') ? 3840 : ((resMode === '1080p') ? 1920 : 5120)));
+        // Fast 1600px preview during live slider dragging (~15ms per frame), full 8K ceiling on release/bake
+        const maxDim = isPreview ? 1600 : ((resMode === '8k' || resMode === 'original') ? 8192 : ((resMode === '4k') ? 3840 : ((resMode === '1080p') ? 1920 : 5120)));
 
         const stats = gradingEngine.applyGrade(rawSourceImage, bakedGradedCanvas, {
           blackFloor: floor,
@@ -1696,7 +1741,11 @@
         if (!hardwareDrawable) {
           const blob = await new Promise(resolve => bakedGradedCanvas.toBlob(resolve, 'image/webp', 0.96));
           const img = new Image();
-          img.src = URL.createObjectURL(blob);
+          if (activeGradedBlobUrl) {
+            try { URL.revokeObjectURL(activeGradedBlobUrl); } catch (e) {}
+          }
+          activeGradedBlobUrl = URL.createObjectURL(blob);
+          img.src = activeGradedBlobUrl;
           await img.decode();
           hardwareDrawable = img;
         }
@@ -1751,6 +1800,13 @@
           if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED True-Black';
           if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments';
           alert('Could not grade pixels: This external image does not allow direct pixel manipulation due to CORS. Please download the image and drag-and-drop it into the app.');
+        }
+      } finally {
+        isGradingActive = false;
+        if (pendingGradeRequest) {
+          const req = pendingGradeRequest;
+          pendingGradeRequest = null;
+          applyInBrowserGrade(req.triggerType, req.isPreview);
         }
       }
     }, isPreview ? 0 : 20);
@@ -3615,7 +3671,7 @@
             tempCanvas.height = th;
             const tctx = tempCanvas.getContext('2d');
             tctx.imageSmoothingEnabled = true;
-            tctx.imageSmoothingQuality = 'high';
+            tctx.imageSmoothingQuality = 'medium';
             tctx.drawImage(activeRenderDrawable, 0, 0, tw, th);
 
             // Asynchronous non-blocking toBlob encoding off the main JS thread
@@ -3642,6 +3698,8 @@
                 dataUri = tempCanvas.toDataURL('image/jpeg', 0.85);
               }
             }
+            tempCanvas.width = 0;
+            tempCanvas.height = 0;
           } else {
             // Case 3: Tainted canvas (CORS restricted remote image)
             // Attempt automated untainting via CORS proxy
