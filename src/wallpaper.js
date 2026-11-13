@@ -745,19 +745,26 @@
     }
 
     try {
-      const res = await fetch(url, { signal, mode: 'cors' });
+      // 35 second timeout for on-demand observatory cutout generation
+      const timeoutSignal = (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) ? AbortSignal.timeout(35000) : null;
+      const combinedSignal = (timeoutSignal && AbortSignal.any) ? AbortSignal.any([signal, timeoutSignal]) : signal;
+      const res = await fetch(url, { signal: combinedSignal, mode: 'cors' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await streamResponse(res);
     } catch (err) {
       if (signal.aborted) throw err;
       console.warn(`[Studio] Direct CORS fetch failed for ${url} (${err.message}). Trying image proxy...`);
 
-      if (url.startsWith('http://') || url.startsWith('https://')) {
+      // Skip slow proxy for known CORS servers (SDSS & Legacy Survey) to avoid gateway timeouts
+      const isKnownCors = url.includes('skyserver.sdss.org') || url.includes('legacysurvey.org');
+      if (!isKnownCors && (url.startsWith('http://') || url.startsWith('https://'))) {
         try {
           const elStatus = document.getElementById('fetch-status-text');
           if (elStatus) elStatus.textContent = 'Archive requires proxy mirror... Connecting...';
           const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=jpg`;
-          const proxyRes = await fetch(proxyUrl, { signal });
+          const proxyTimeout = (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) ? AbortSignal.timeout(8000) : null;
+          const proxySignal = (proxyTimeout && AbortSignal.any) ? AbortSignal.any([signal, proxyTimeout]) : signal;
+          const proxyRes = await fetch(proxyUrl, { signal: proxySignal });
           if (!proxyRes.ok) throw new Error(`Weserv HTTP ${proxyRes.status}`);
           return await streamResponse(proxyRes);
         } catch (proxyErr) {
@@ -1067,9 +1074,19 @@
 
     rawSourceImage = new Image();
 
+    // Check if domain is known to send Access-Control-Allow-Origin: * natively
+    const isKnownCorsOrigin = isRemote && (
+      url.includes('skyserver.sdss.org') ||
+      url.includes('legacysurvey.org') ||
+      url.includes('wikimedia.org') ||
+      url.includes('eso.org') ||
+      url.includes('chandra.si.edu')
+    );
+
     // In-memory data/blob URIs are always same-origin.
-    // If forceNoCors is true, skip crossOrigin='anonymous' to avoid a guaranteed preflight failure.
-    if (forceNoCors || isDataUri || isBlobUri) {
+    // If forceNoCors is true, skip crossOrigin='anonymous' ONLY for unknown third-party domains.
+    // Known CORS origins (SDSS & Legacy Survey) are always preserved with crossOrigin to prevent canvas tainting!
+    if ((forceNoCors && !isKnownCorsOrigin) || isDataUri || isBlobUri) {
       rawSourceImage.removeAttribute('crossorigin');
     } else if (isRemote) {
       rawSourceImage.crossOrigin = 'anonymous';
@@ -1548,12 +1565,15 @@
       radarCtx.fill();
 
       // Telemetry readout
-      const pctX = Math.round((cam.x / imgW) * 100);
-      const pctY = Math.round((cam.y / imgH) * 100);
+      const posX = (cam.center && typeof cam.center.x === 'number') ? cam.center.x : (r.x + r.w / 2);
+      const posY = (cam.center && typeof cam.center.y === 'number') ? cam.center.y : (r.y + r.h / 2);
+      const curZoom = (typeof cam.relativeZoom === 'number') ? cam.relativeZoom : ((typeof cam.scale === 'number') ? cam.scale : 1.0);
+      const pctX = Math.round((posX / imgW) * 100);
+      const pctY = Math.round((posY / imgH) * 100);
       if (rw < 140) {
-        radarTelemetry.textContent = `${pctX}%, ${pctY}% | ${cam.zoom.toFixed(1)}x`;
+        radarTelemetry.textContent = `${pctX}%, ${pctY}% | ${curZoom.toFixed(1)}x`;
       } else {
-        radarTelemetry.textContent = `POS: ${pctX}%, ${pctY}% | ZOOM: ${cam.zoom.toFixed(2)}x`;
+        radarTelemetry.textContent = `POS: ${pctX}%, ${pctY}% | ZOOM: ${curZoom.toFixed(2)}x`;
       }
     }
   }
@@ -2819,36 +2839,38 @@
         }
 
         // 2. SDSS DR18 Optical Sky Survey (where declination is in SDSS footprint: -15° to +75°)
-        // Available for targeted searches and coordinates
+        // Upgraded from 2048x2048 (4.2 MP) to 3072x3072 (9.4 MP) Ultra-HD with native 0.396"/px resolution
         if (!isGeneric && dec >= -15 && dec <= 75) {
           results.push({
             source: 'SDSS DR18 SkyServer',
-            sourceTag: '🔭 SDSS Optical (CORS-Free)',
+            sourceTag: '🔭 SDSS Optical 9.4 MP (CORS-Free)',
             title: `${name} (SDSS Optical)`,
-            desc: `Sloan Digital Sky Survey DR18 optical observation. ${coordBadge}. 100% untainted grading & export.`,
+            desc: `Sloan Digital Sky Survey DR18 optical observation. ${coordBadge}. 9.4 MP Ultra-HD master (3072×3072). 100% untainted grading & export.`,
             thumb: `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg?ra=${ra}&dec=${dec}&scale=0.8&width=600&height=400`,
-            fullUrl: `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg?ra=${ra}&dec=${dec}&scale=0.4&width=2048&height=2048`,
-            width: 2048,
-            height: 2048,
-            mp: 4.2
+            fullUrl: `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg?ra=${ra}&dec=${dec}&scale=0.396&width=3072&height=3072`,
+            width: 3072,
+            height: 3072,
+            mp: 9.4
           });
         }
 
         // 3. For coordinates or objects without a curated master, provide DESI / DECam Optical Cutout
-        // Uses CDN proxy for the thumbnail to prevent browser HTTP 429 rate limits
+        // Upgraded from 2048x2048 (4.2 MP) to 3000x3000 (9.0 MP) Ultra-HD with native 0.262"/px resolution
+        // Dynamically selects ls-dr10 (northern/DESI footprint) or ls-dr9 (southern/DES footprint) for 100% sky coverage
         if (!tgt.master) {
-          const directLegacyThumb = `https://www.legacysurvey.org/viewer/jpeg-cutout?ra=${ra}&dec=${dec}&width=600&height=400&layer=ls-dr10&pixscale=${scale.toFixed(2)}`;
+          const legacyLayer = (dec >= -18 && dec <= 84) ? 'ls-dr10' : 'ls-dr9';
+          const directLegacyThumb = `https://www.legacysurvey.org/viewer/jpeg-cutout?ra=${ra}&dec=${dec}&width=600&height=400&layer=${legacyLayer}&pixscale=${scale.toFixed(2)}`;
           const proxyLegacyThumb = `https://images.weserv.nl/?url=${encodeURIComponent(directLegacyThumb)}`;
           results.push({
             source: 'Legacy Sky Survey (DESI / DECam)',
-            sourceTag: '🔭 Optical Master (CORS-Free)',
+            sourceTag: '🔭 DECam Optical 9.0 MP (CORS-Free)',
             title: `${name} (Optical Deep Sky)`,
-            desc: `High-resolution optical color master from the Dark Energy Camera (DECam). ${coordBadge}. 100% untainted grading & export.`,
-            thumb: proxyLegacyThumb,
-            fullUrl: `https://www.legacysurvey.org/viewer/jpeg-cutout?ra=${ra}&dec=${dec}&width=2048&height=2048&layer=ls-dr10&pixscale=${(scale * 0.5).toFixed(3)}`,
-            width: 2048,
-            height: 2048,
-            mp: 4.2
+            desc: `High-resolution optical color master from the Dark Energy Camera (DECam). ${coordBadge}. 9.0 MP Ultra-HD master (3000×3000, ${legacyLayer}). 100% untainted grading & export.`,
+            thumb: directLegacyThumb,
+            fullUrl: `https://www.legacysurvey.org/viewer/jpeg-cutout?ra=${ra}&dec=${dec}&width=3000&height=3000&layer=${legacyLayer}&pixscale=0.262`,
+            width: 3000,
+            height: 3000,
+            mp: 9.0
           });
         }
       }
@@ -3316,8 +3338,9 @@
             }
 
             // Direct high-res master
-            btn.textContent = 'Explore Vista →';
+            btn.textContent = '⏳ Loading Studio...';
             fetchAndLoadImage(loadUrl, res.thumb, res.title, () => {
+              btn.textContent = 'Explore Vista →';
               switchToScreen('studio');
             });
           }

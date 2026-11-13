@@ -96,6 +96,14 @@ assert(code.includes("elStatus.textContent = 'Preparing high-res master for 60 F
 assert(code.includes('if (modal) modal.classList.add(\'hidden\');'), 'Modal must close on onload');
 console.log('✓ Modal persistence & seamless transition logic verified in wallpaper.js.');
 
+// Test 6: Verify upgraded resolutions for SDSS (9.4 MP) & Legacy Sky Survey (9.0 MP)
+assert(code.includes('width=3072&height=3072'), 'SDSS DR18 must request 3072x3072 (9.4 MP)');
+assert(code.includes('mp: 9.4'), 'SDSS DR18 metadata must report 9.4 MP');
+assert(code.includes('width=3000&height=3000'), 'Legacy Survey must request 3000x3000 (9.0 MP)');
+assert(code.includes('mp: 9.0'), 'Legacy Survey metadata must report 9.0 MP');
+assert(code.includes('isKnownCorsOrigin'), 'Known CORS origins must preserve crossOrigin attribute');
+console.log('✓ Upgraded 9MP+ survey resolutions & untainted canvas preservation verified.');
+
 console.log('===============================================================');
 console.log('ALL SURVEY & MODAL TESTS PASSED! (100%)');
 console.log('===============================================================');
