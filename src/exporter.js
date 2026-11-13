@@ -104,12 +104,14 @@ ${recipeJson}
 
       let cameraEngine = null;
       let activeImage = new Image();
+      let drawSource = null;
       let isPlaying = true;
       let progress = 0.0;
       let lastTimestamp = 0;
 
       function resize() {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        // Cap DPR at 1.25 for desktop wallpaper playback to prevent fill-rate saturation on 4K/HiDPI screens
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
         canvas.width = Math.round(window.innerWidth * dpr);
         canvas.height = Math.round(window.innerHeight * dpr);
       }
@@ -120,6 +122,14 @@ ${recipeJson}
 
         function onImageReady() {
           if (cameraEngine) return;
+          drawSource = activeImage;
+          // Asynchronously promote texture to GPU VRAM ImageBitmap if supported (eliminates WebKitGTK CPU texture swizzling)
+          if (typeof createImageBitmap !== 'undefined') {
+            createImageBitmap(activeImage).then(bmp => {
+              drawSource = bmp;
+            }).catch(() => {});
+          }
+
           cameraEngine = new CameraEngine(activeImage.naturalWidth, activeImage.naturalHeight, {
             mode: '${presetMode}',
             loopDurationSec: DURATION_SEC
@@ -174,7 +184,8 @@ ${recipeJson}
       function loop(timestamp) {
         try {
           if (!lastTimestamp) lastTimestamp = timestamp;
-          const dt = (timestamp - lastTimestamp) / 1000;
+          // Clamp dt to a maximum of 50ms to eliminate stutter jumps when compositor deprioritizes background windows
+          const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
           lastTimestamp = timestamp;
 
           if (isPlaying && DURATION_SEC > 0) {
@@ -191,7 +202,7 @@ ${recipeJson}
       }
 
       function render() {
-        if (!cameraEngine) return;
+        if (!cameraEngine || !drawSource) return;
         const vw = canvas.width;
         const vh = canvas.height;
         const cam = cameraEngine.solveCamera(progress, vw, vh);
@@ -200,8 +211,9 @@ ${recipeJson}
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, vw, vh);
         ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(activeImage, rect.x, rect.y, rect.w, rect.h, 0, 0, vw, vh);
+        // Use 'medium' (hardware bilinear filtering) instead of 'high' (bicubic CPU filtering) for rock-solid 60 FPS in WebKitGTK
+        ctx.imageSmoothingQuality = 'medium';
+        ctx.drawImage(drawSource, rect.x, rect.y, rect.w, rect.h, 0, 0, vw, vh);
       }
 
       init();

@@ -97,7 +97,7 @@ async function runExporterTests() {
   const contentB = await lastBlob.text();
   assert(contentB.includes(`const EMBEDDED_IMAGE_DATA = "${remoteUrl}";`), 'HTML must embed remote URL');
   assert(contentB.includes('activeImage.src = EMBEDDED_IMAGE_DATA;'), 'HTML must set activeImage.src');
-  assert(contentB.includes('ctx.drawImage(activeImage'), 'HTML must draw image to canvas');
+  assert(contentB.includes('ctx.drawImage(drawSource') || contentB.includes('ctx.drawImage(activeImage'), 'HTML must draw image to canvas');
   console.log('✓ Standalone HTML export verified with direct remote URL fallback (CORS resilience).');
 
   // Test C: Dynamic & Distinct Filename Generation

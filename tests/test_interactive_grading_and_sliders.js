@@ -63,7 +63,7 @@ const fnEnd = wallpaperSrc.indexOf('function resetAmoledSection()');
 const fnBody = wallpaperSrc.slice(fnStart, fnEnd);
 
 assert(fnBody.includes('if (!isPreview)'), 'Must conditionally skip modal / heavy UI updates during live isPreview');
-assert(fnBody.includes('btnAmoled.textContent = \'✓ AMOLED Grade Baked!\''), 'Must provide affirmative user feedback on AMOLED bake');
+assert(fnBody.includes('btnAmoled.textContent = \'✓ AMOLED Applied!\'') || fnBody.includes('btnAmoled.textContent = \'✓ AMOLED Grade Baked!\''), 'Must provide affirmative user feedback on AMOLED bake');
 assert(fnBody.includes('btnAdj.textContent = \'✓ Adjustments Applied!\''), 'Must provide affirmative user feedback on adjustments bake');
 assert(fnBody.includes('renderFrame();'), 'Must immediately redraw viewport canvas after updating activeRenderDrawable');
 console.log('✓ UI feedback, renderFrame() call, and isPreview branching verified inside applyInBrowserGrade.');

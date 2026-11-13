@@ -745,8 +745,8 @@
     }
 
     try {
-      // 35 second timeout for on-demand observatory cutout generation
-      const timeoutSignal = (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) ? AbortSignal.timeout(35000) : null;
+      // 55 second timeout for on-demand observatory cutout generation
+      const timeoutSignal = (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) ? AbortSignal.timeout(55000) : null;
       const combinedSignal = (timeoutSignal && AbortSignal.any) ? AbortSignal.any([signal, timeoutSignal]) : signal;
       const res = await fetch(url, { signal: combinedSignal, mode: 'cors' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -2839,18 +2839,18 @@
         }
 
         // 2. SDSS DR18 Optical Sky Survey (where declination is in SDSS footprint: -15° to +75°)
-        // Upgraded from 2048x2048 (4.2 MP) to 3072x3072 (9.4 MP) Ultra-HD with native 0.396"/px resolution
+        // Upgraded to SDSS SkyServer server maximum: 4096x4096 (16.8 MP) Ultra-HD with native 0.396"/px resolution
         if (!isGeneric && dec >= -15 && dec <= 75) {
           results.push({
             source: 'SDSS DR18 SkyServer',
-            sourceTag: '🔭 SDSS Optical 9.4 MP (CORS-Free)',
+            sourceTag: '🔭 SDSS Optical 16.8 MP (CORS-Free)',
             title: `${name} (SDSS Optical)`,
-            desc: `Sloan Digital Sky Survey DR18 optical observation. ${coordBadge}. 9.4 MP Ultra-HD master (3072×3072). 100% untainted grading & export.`,
+            desc: `Sloan Digital Sky Survey DR18 optical observation. ${coordBadge}. 16.8 MP Ultra-HD master (4096×4096, server max). 100% untainted grading & export.`,
             thumb: `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg?ra=${ra}&dec=${dec}&scale=0.8&width=600&height=400`,
-            fullUrl: `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg?ra=${ra}&dec=${dec}&scale=0.396&width=3072&height=3072`,
-            width: 3072,
-            height: 3072,
-            mp: 9.4
+            fullUrl: `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg?ra=${ra}&dec=${dec}&scale=0.396&width=4096&height=4096`,
+            width: 4096,
+            height: 4096,
+            mp: 16.8
           });
         }
 

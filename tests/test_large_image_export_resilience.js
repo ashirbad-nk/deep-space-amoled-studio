@@ -48,12 +48,12 @@ assert(wallpaperJs.includes("await new Promise(r => setTimeout(r, 40));"),
   'HTML export must yield to browser UI thread before heavy canvas operations');
 console.log('✓ Asynchronous non-blocking toBlob encoding & UI yielding verified.');
 
-// Test 4: Verify safe 5K GPU ceiling (5120px) for gigapixel masters
-assert(wallpaperJs.includes("let maxAllowedW = 5120;"),
-  'Export canvas width must be safely capped at 5120px (5K Ultra HD)');
-assert(wallpaperJs.includes("maxAllowedW = (origW > 5120 ? 5120 : origW);"),
-  'Original mode must safely cap gigapixel images (>5120px) to prevent freezing');
-console.log('✓ Safe 5K ceiling for gigapixel images (5,120px) verified.');
+// Test 4: Verify safe 8K GPU ceiling (8192px) for gigapixel masters
+assert(wallpaperJs.includes("let maxAllowedW = 8192;"),
+  'Export canvas width must be safely capped at 8192px (8K Ultra HD)');
+assert(wallpaperJs.includes("maxAllowedW = (origW > 8192 ? 8192 : origW);"),
+  'Original mode must safely cap gigapixel images (>8192px) to prevent freezing');
+console.log('✓ Safe 8K ceiling for gigapixel images (8,192px) verified.');
 
 // Test 5: Verify robust template image hydration and error handling in exporter.js
 assert(exporterJs.includes('activeImage.onerror = (err) => {'),
