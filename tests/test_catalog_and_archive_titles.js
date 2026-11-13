@@ -26,21 +26,20 @@ const keys = Object.keys(catalog);
 console.log(`Curated Catalog count: ${keys.length}`);
 console.log(`Curated Catalog keys: ${keys.join(', ')}`);
 
-assert.strictEqual(keys.length, 6, 'Catalog should have exactly 6 curated items remaining');
+assert.strictEqual(keys.length, 9, 'Catalog should have exactly 9 curated items');
 assert(!keys.includes('jupiter'), 'Jupiter must be removed from CATALOG');
 assert(!keys.includes('quintet'), 'Stephan\'s Quintet must be removed from CATALOG');
 assert(!keys.includes('deep_field'), 'Deep Field must be removed from CATALOG');
 
-const expectedKeys = ['carina', 'pillars', 'phantom_galaxy', 'tarantula', 'southern_ring', 'cartwheel'];
+const expectedKeys = ['carina', 'pillars', 'phantom_galaxy', 'tarantula', 'southern_ring', 'cartwheel', 'helix_nebula', 'orion_head', 'pillars_landscape'];
 assert.deepStrictEqual(keys, expectedKeys, 'Remaining keys must match expected high-fidelity masters');
-console.log('✓ CATALOG item removal & remaining 6 high-fidelity masters verified.');
+console.log('✓ CATALOG item additions & 9 high-fidelity masters verified.');
 
 // Test 2: Check index.html chip and count references
-assert(indexHtml.includes('🌟 All Curated (6)'), 'Filter chip must reflect 6 curated objects');
-assert(indexHtml.includes('id="curated-count">6 Objects</span>'), 'Section count must show 6 Objects');
-assert(!indexHtml.includes('data-filter="planets"'), 'Planets filter chip should be removed');
-assert(!indexHtml.includes('data-filter="void"'), 'Void filter chip should be removed');
-console.log('✓ index.html curated count and filter chips verified.');
+assert(indexHtml.includes('id="curated-count">9 Objects</span>'), 'Section count must show 9 Objects');
+assert(!indexHtml.includes('filters-panel'), 'Category filters panel must be removed as requested');
+assert(indexHtml.includes('celestial-grid-3x3'), 'Cards grid must be 3x3 layout');
+console.log('✓ index.html curated count and 3x3 grid verified.');
 
 // Test 3: Check dynamic archive title & badge elements in index.html
 assert(indexHtml.includes('id="archive-results-title"'), 'index.html must have id="archive-results-title"');

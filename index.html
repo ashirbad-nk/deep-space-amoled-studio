@@ -85,10 +85,9 @@
       <aside class="discovery-sidebar">
         <!-- Hero Header inside sidebar -->
         <div class="sidebar-header">
-          <h2 class="sidebar-title">Step 1: Discover Your Celestial Vista</h2>
+          <h2 class="sidebar-title">Explore Celestial Vistas</h2>
           <p class="sidebar-desc">
-            Explore breathtaking deep space phenomena, search NASA & ESA/ESO Wikimedia archives, or upload your own 4K/8K wallpaper.
-            Every scene is graded for true OLED <code>#000000</code> blacks and animated with a seamless, jerk-free 60 FPS camera loop.
+            Ultra-HD observatory masters graded for true OLED <code>#000000</code> blacks with seamless 60 FPS camera loops.
           </p>
         </div>
 
@@ -111,18 +110,37 @@
               <input 
                 type="text" 
                 id="global-cosmic-search" 
-                placeholder="Search cosmic targets or coordinates (e.g. Orion, M31, NGC 3324, 83.82, -5.39)..."
+                placeholder="Target name or coordinates (e.g. Orion, M31, 83.82, -5.39)..."
                 autocomplete="off"
               >
               <button id="btn-clear-search" class="btn-clear" style="display: none;">&times;</button>
             </div>
             <button id="btn-search-nasa-action" class="btn-nasa-search" title="Search public archives in real-time">
-              🚀 Search Archives
+              🚀 Search
             </button>
           </div>
         </div>
 
-        <!-- Popular Discoveries Matrix (3 Rows, Randomized at Start) -->
+        <!-- Compact Custom Sources: Upload / Drop & Direct URL (On Top of Popular Discoveries) -->
+        <div class="sidebar-panel custom-sources-panel" id="section-custom-sources">
+          <div class="panel-header-row">
+            <span class="panel-label">📁 CUSTOM IMAGE OR URL</span>
+          </div>
+          <div class="compact-sources-row">
+            <div class="compact-dropzone-wrap" id="dropzone-box" title="Click to browse or drop an astronomical image or .html recipe">
+              <input type="file" id="file-picker-input" accept="image/*,.html" style="display: none;">
+              <button type="button" class="btn-compact-browse" onclick="document.getElementById('file-picker-input').click()">
+                📁 Upload / Drop
+              </button>
+            </div>
+            <div class="compact-url-wrap">
+              <input type="text" id="custom-url-field" placeholder="Paste direct image URL..." autocomplete="off">
+              <button id="btn-fetch-custom-url" type="button" class="btn-compact-url" title="Load image from URL">Load &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Popular Discoveries Matrix (3 Rows, Randomized at Start) - Placed Below Custom Sources -->
         <div class="sidebar-panel popular-discoveries-panel">
           <div class="popular-discoveries-header">
             <div class="popular-header-left">
@@ -137,69 +155,23 @@
             <!-- 3 Rows dynamically populated from POPULAR_DISCOVERIES on start -->
           </div>
         </div>
-
-        <!-- Category Filter Chips -->
-        <div class="sidebar-panel filters-panel">
-          <div class="panel-header-row">
-            <span class="panel-label">🏷️ CURATED SHOWCASE CATEGORIES</span>
-          </div>
-          <div class="category-chips-scroll">
-            <button class="chip active" data-filter="all">🌟 All Curated (6)</button>
-            <button class="chip" data-filter="cliffs">⛰️ Cosmic Cliffs</button>
-            <button class="chip" data-filter="pillars">🏛️ Pillars of Creation</button>
-            <button class="chip" data-filter="galaxies">🌀 Spiral Galaxies</button>
-            <button class="chip" data-filter="webs">🕸️ Nebular Webs</button>
-            <button class="chip" data-filter="rings">💍 Stellar Rings</button>
-            <button class="chip chip-nasa" data-filter="nasa-archive">🌐 Global Space Archives</button>
-            <button class="chip chip-upload" data-filter="custom-upload">📁 Upload / Custom</button>
-          </div>
-        </div>
-
-        <!-- Direct Upload & Direct Web URL (Prominently Placed in Sidebar) -->
-        <div class="sidebar-panel custom-sources-panel" id="section-custom-sources">
-          <div class="panel-header-row">
-            <span class="panel-label">📁 CUSTOM SOURCES & DROPZONE</span>
-          </div>
-          <div class="custom-card upload-dropzone-card" id="dropzone-box" title="Drag and drop or click to upload your high-resolution image">
-            <div class="dropzone-icon">📁</div>
-            <div class="dropzone-text">
-              <h4>Drop Any Astronomical Image Here</h4>
-              <p>Supports PNG, JPG, WebP, AVIF, and re-importing exported .HTML wallpaper recipes. Drag and drop anywhere or browse.</p>
-            </div>
-            <input type="file" id="file-picker-input" accept="image/*,.html" style="display: none;">
-            <button class="btn-browse" onclick="document.getElementById('file-picker-input').click()">
-              Browse Local File
-            </button>
-          </div>
-
-          <div class="custom-card url-input-card">
-            <div class="url-card-header">
-              <h4>🌐 Load Image from Direct URL</h4>
-              <p>Paste any direct link to an astronomical or high-res photo.</p>
-            </div>
-            <div class="url-input-row">
-              <input type="text" id="custom-url-field" placeholder="https://cdn.esawebb.org/.../image.jpg">
-              <button id="btn-fetch-custom-url" class="btn-primary">Load &rarr;</button>
-            </div>
-          </div>
-        </div>
       </aside>
 
       <!-- COLUMNS 2 & 3: Main Showcase & Search Results Grid (Spans 2 columns) -->
       <section class="discovery-showcase-column">
-        <!-- Section A: Curated Showcase Grid (Default 6 Vistas in 2 Columns) -->
+        <!-- Section A: Curated Showcase Grid (9 Curated Vistas in 3x3 Grid) -->
         <section id="section-curated-grid" class="cards-section">
           <div class="section-heading-row">
             <h3 class="section-title">✨ Curated Astronomical Masterpieces (Instant Offline Loading)</h3>
-            <span class="section-count" id="curated-count">6 Objects</span>
+            <span class="section-count" id="curated-count">9 Objects</span>
           </div>
 
-          <div class="celestial-grid celestial-grid-2col" id="curated-cards-container">
+          <div class="celestial-grid celestial-grid-3x3" id="curated-cards-container">
             <!-- Populated dynamically with high-speed local WebP thumbnails -->
           </div>
         </section>
 
-        <!-- Section B: Astronomical Archive Search Results (In 2 Columns) -->
+        <!-- Section B: Astronomical Archive Search Results (In 3x3 Grid) -->
         <section id="section-nasa-results" class="cards-section" style="display: none;">
           <div class="section-heading-row">
             <div class="nasa-heading-group">
@@ -212,7 +184,7 @@
             <div class="cosmic-spinner"></div>
             <span id="nasa-loading-text">Querying NASA Image and Video Library...</span>
           </div>
-          <div class="celestial-grid celestial-grid-2col" id="nasa-cards-container"></div>
+          <div class="celestial-grid celestial-grid-3x3" id="nasa-cards-container"></div>
         </section>
       </section>
     </main>

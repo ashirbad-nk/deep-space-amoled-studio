@@ -126,6 +126,51 @@
       telescope: 'JWST MIRI',
       width: 4000,
       height: 3682
+    },
+    'helix_nebula': {
+      title: 'Eye of God (Helix Nebula)',
+      subtitle: 'NGC 7293 • Planetary Nebula • 650 Light-Years',
+      desc: 'Spectacular celestial eye showcasing intricate radial gaseous filaments and glowing rings against pure black cosmos.',
+      category: 'rings',
+      thumb: 'images/thumbnails/helix_nebula.webp',
+      src: (typeof window !== 'undefined' && window.DEFAULT_ASSETS && window.DEFAULT_ASSETS.helix_nebula) ? window.DEFAULT_ASSETS.helix_nebula : 'images/graded/helix_nebula_5k.webp',
+      fallback: 'images/graded/helix_nebula_5k.webp',
+      rawUrl: 'images/graded/helix_nebula_5k.webp',
+      resBadge: '5K Master (24.3 MP)',
+      blackLevel: '🖤 ~35% OLED Black',
+      telescope: 'Hubble & Blanco 4m',
+      width: 4750,
+      height: 5120
+    },
+    'orion_head': {
+      title: 'Orion\'s Head (Lambda Orionis)',
+      subtitle: 'Sharpless 2-264 • NASA JPL PIA14040',
+      desc: 'Colossal expanding ring of glowing interstellar dust enshrouding the head of Orion, captured in multi-spectral infrared.',
+      category: 'rings',
+      thumb: 'images/thumbnails/orion_head.webp',
+      src: (typeof window !== 'undefined' && window.DEFAULT_ASSETS && window.DEFAULT_ASSETS.orion_head) ? window.DEFAULT_ASSETS.orion_head : 'images/graded/orion_head_pia14040_5k.webp',
+      fallback: 'images/graded/orion_head_pia14040_5k.webp',
+      rawUrl: 'https://images-assets.nasa.gov/image/PIA14040/PIA14040~orig.jpg',
+      resBadge: '5K Master (24.4 MP)',
+      blackLevel: '🖤 ~25% OLED Black',
+      telescope: 'NASA WISE Infrared',
+      width: 5120,
+      height: 4764
+    },
+    'pillars_landscape': {
+      title: 'Pillars of Creation (Panorama)',
+      subtitle: 'Eagle Nebula (M16) • JWST NIRCam Panoramic',
+      desc: 'Cinematic widescreen landscape view of the famous star-forming spires of the Eagle Nebula in stunning 5K panoramic detail.',
+      category: 'pillars',
+      thumb: 'images/thumbnails/pillars_landscape.webp',
+      src: (typeof window !== 'undefined' && window.DEFAULT_ASSETS && window.DEFAULT_ASSETS.pillars_landscape) ? window.DEFAULT_ASSETS.pillars_landscape : 'images/graded/pillars_landscape_5k.webp',
+      fallback: 'images/graded/pillars_landscape_5k.webp',
+      rawUrl: 'images/graded/pillars_landscape_5k.webp',
+      resBadge: '5K Panorama (17.5 MP)',
+      blackLevel: '🖤 ~20% OLED Black',
+      telescope: 'JWST NIRCam Panorama',
+      width: 5120,
+      height: 3413
     }
   };
 
@@ -136,74 +181,89 @@
   let activeImageSpecs = null;
   let toastDismissTimeout = null;
 
-  // Extensive Master List of Popular Discoveries (Sanitized & Categorized for 3-Row Matrix)
+  // Extensive Master Catalog Table of Popular Discoveries (Sanitized, Categorized & Grounded with Celestial Coordinates & Aliases)
   const POPULAR_DISCOVERIES = [
     // Nebulae & Cosmic Gas Clouds
-    { name: '🔭 Orion Nebula (M42)', query: 'Orion Nebula' },
-    { name: '🏛️ Pillars of Creation', query: 'Pillars of Creation' },
-    { name: '⛰️ Cosmic Cliffs (Carina)', query: 'Carina Nebula' },
-    { name: '🦀 Crab Nebula (M1)', query: 'Crab Nebula' },
-    { name: '🦋 Butterfly Nebula (NGC 6302)', query: 'Butterfly Nebula' },
-    { name: '💍 Southern Ring (NGC 3132)', query: 'Southern Ring Nebula' },
-    { name: '🕸️ Tarantula Nebula (30 Doradus)', query: 'Tarantula Nebula' },
-    { name: '🐴 Horsehead Nebula (B33)', query: 'Horsehead Nebula' },
-    { name: '🔮 Helix Nebula (NGC 7293)', query: 'Helix Nebula' },
-    { name: '🐈 Cat\'s Eye Nebula (NGC 6543)', query: 'Cats Eye Nebula' },
-    { name: '🦭 Ring Nebula (M57)', query: 'Ring Nebula' },
-    { name: '🌌 Veil Nebula Supernova Remnant', query: 'Veil Nebula' },
-    { name: '🦅 Eagle Nebula Core (M16)', query: 'Eagle Nebula' },
-    { name: '🌺 Rosette Nebula (NGC 2237)', query: 'Rosette Nebula' },
-    { name: '💥 Supernova Remnant 1987A', query: 'Supernova 1987A' },
-    { name: '🕯️ Cone Nebula (NGC 2264)', query: 'Cone Nebula' },
-    { name: '🫧 Bubble Nebula (NGC 7635)', query: 'Bubble Nebula' },
-    { name: '❄️ Lagoon Nebula (M8)', query: 'Lagoon Nebula' },
-    { name: '🧙 Wizard Nebula (NGC 7380)', query: 'Wizard Nebula' },
-    { name: '🌊 Witch Head Nebula', query: 'Witch Head Nebula' },
-    { name: '👁️ Hourglass Nebula (MyCn 18)', query: 'Hourglass Nebula' },
-    { name: '💎 Cygnus Wall (North America)', query: 'North America Nebula' },
-    { name: '✨ Thor\'s Helmet (NGC 2359)', query: 'Thors Helmet' },
-    { name: '🚀 Eta Carinae Homunculus', query: 'Eta Carinae' },
-    { name: '💎 Mystic Mountain (Carina)', query: 'Mystic Mountain' },
+    { id: 'orion', name: '🔭 Orion Nebula (M42)', query: 'Orion Nebula', catalogId: 'M42 / NGC 1976', ra: 83.8221, dec: -5.3911, aliases: ['M42', 'NGC 1976', 'Orion Nebula', 'Messier 42', 'Sh2-279', 'Great Nebula in Orion'], category: 'nebula', desc: 'Closest massive star-forming nursery to Earth.' },
+    { id: 'pillars', name: '🏛️ Pillars of Creation', query: 'Pillars of Creation', catalogId: 'M16 / NGC 6611', ra: 274.7000, dec: -13.8070, aliases: ['M16', 'NGC 6611', 'Eagle Nebula', 'Pillars of Creation', 'Star Queen'], category: 'nebula', desc: 'Towering interstellar columns of cool hydrogen gas and dust sculpting newborn stars.' },
+    { id: 'carina', name: '⛰️ Cosmic Cliffs (Carina)', query: 'Carina Nebula', catalogId: 'NGC 3324 / NGC 3372', ra: 160.0380, dec: -58.6330, aliases: ['NGC 3324', 'NGC 3372', 'Carina Nebula', 'Cosmic Cliffs', 'Gabriela Mistral'], category: 'nebula', desc: 'Dramatic edge of a giant gaseous cavity where newborn stars carve sheer cliffs.' },
+    { id: 'crab', name: '🦀 Crab Nebula (M1)', query: 'Crab Nebula', catalogId: 'M1 / NGC 1952', ra: 83.6331, dec: 22.0145, aliases: ['M1', 'NGC 1952', 'Crab Nebula', 'Taurus A', 'SN 1054'], category: 'nebula', desc: 'Supernova remnant powered by a rapidly pulsing central neutron star.' },
+    { id: 'butterfly', name: '🦋 Butterfly Nebula (NGC 6302)', query: 'Butterfly Nebula', catalogId: 'NGC 6302 / Caldwell 69', ra: 257.9150, dec: -37.1030, aliases: ['NGC 6302', 'Caldwell 69', 'Butterfly Nebula', 'Bug Nebula', 'Sh2-6'], category: 'nebula', desc: 'Bipolar planetary nebula with majestic gaseous wings extending over 3 light-years.' },
+    { id: 'southern_ring', name: '💍 Southern Ring (NGC 3132)', query: 'Southern Ring Nebula', catalogId: 'NGC 3132 / Caldwell 74', ra: 151.7567, dec: -40.4361, aliases: ['NGC 3132', 'Caldwell 74', 'Southern Ring', 'Eight-Burst Nebula'], category: 'nebula', desc: 'Concentric shells of gas expelled by a dying central binary star system.' },
+    { id: 'tarantula', name: '🕸️ Tarantula Nebula (30 Doradus)', query: 'Tarantula Nebula', catalogId: 'NGC 2070 / 30 Doradus', ra: 84.6766, dec: -69.1009, aliases: ['NGC 2070', '30 Doradus', 'Tarantula Nebula', 'Caldwell 103'], category: 'nebula', desc: 'Most luminous non-stellar object in the Local Group of galaxies.' },
+    { id: 'horsehead', name: '🐴 Horsehead Nebula (B33)', query: 'Horsehead Nebula', catalogId: 'Barnard 33 / IC 434', ra: 85.2458, dec: -2.4583, aliases: ['Barnard 33', 'B33', 'IC 434', 'Horsehead Nebula'], category: 'nebula', desc: 'Dark dust pillar rising like a seahorse silhouette against crimson emission gas.' },
+    { id: 'helix', name: '🔮 Helix Nebula (NGC 7293)', query: 'Helix Nebula', catalogId: 'NGC 7293 / Caldwell 63', ra: 337.4108, dec: -20.8372, aliases: ['NGC 7293', 'Caldwell 63', 'Helix Nebula', 'Eye of God'], category: 'nebula', desc: 'Massive glowing planetary ring famously known as the Eye of God.' },
+    { id: 'cats_eye', name: '🐈 Cat\'s Eye Nebula (NGC 6543)', query: 'Cats Eye Nebula', catalogId: 'NGC 6543 / Caldwell 6', ra: 269.6390, dec: 66.6330, aliases: ['NGC 6543', 'Caldwell 6', 'Cats Eye Nebula', 'Cat\'s Eye'], category: 'nebula', desc: 'Complex layered bubble geometries sculpted by high-speed stellar winds.' },
+    { id: 'ring_m57', name: '🦭 Ring Nebula (M57)', query: 'Ring Nebula', catalogId: 'M57 / NGC 6720', ra: 283.3963, dec: 33.0292, aliases: ['M57', 'NGC 6720', 'Ring Nebula', 'Messier 57'], category: 'nebula', desc: 'Barrel-shaped shroud of gas glowing in neon greens and deep reds.' },
+    { id: 'veil', name: '🌌 Veil Nebula Supernova Remnant', query: 'Veil Nebula', catalogId: 'NGC 6960 / Caldwell 34', ra: 312.7500, dec: 30.7000, aliases: ['NGC 6960', 'NGC 6992', 'Caldwell 34', 'Veil Nebula', 'Cygnus Loop', 'Witches Broom'], category: 'nebula', desc: 'Delicate filamentary shock waves from an ancient supernova explosion.' },
+    { id: 'eagle_core', name: '🦅 Eagle Nebula Core (M16)', query: 'Eagle Nebula', catalogId: 'M16 / NGC 6611', ra: 274.7000, dec: -13.8070, aliases: ['M16', 'NGC 6611', 'Eagle Nebula'], category: 'nebula', desc: 'Vast starburst nebula featuring the legendary Pillars of Creation.' },
+    { id: 'rosette', name: '🌺 Rosette Nebula (NGC 2237)', query: 'Rosette Nebula', catalogId: 'NGC 2237 / Caldwell 49', ra: 98.7000, dec: 4.9000, aliases: ['NGC 2237', 'NGC 2244', 'Caldwell 49', 'Rosette Nebula', 'Skull Nebula'], category: 'nebula', desc: 'Vast spherical emission nebula shaped like a cosmic rose petal.' },
+    { id: 'sn1987a', name: '💥 Supernova Remnant 1987A', query: 'Supernova 1987A', catalogId: 'SN 1987A', ra: 83.8667, dec: -69.2697, aliases: ['SN 1987A', 'Supernova 1987A', 'Sanduleak -69 202'], category: 'nebula', desc: 'Expanding equatorial pearl necklace ring ignited by the nearest observed modern supernova.' },
+    { id: 'cone', name: '🕯️ Cone Nebula (NGC 2264)', query: 'Cone Nebula', catalogId: 'NGC 2264', ra: 100.2450, dec: 9.8960, aliases: ['NGC 2264', 'Cone Nebula', 'Christmas Tree Cluster'], category: 'nebula', desc: 'Dark conical interstellar dust column protruding into a bright hydrogen nebula.' },
+    { id: 'bubble', name: '🫧 Bubble Nebula (NGC 7635)', query: 'Bubble Nebula', catalogId: 'NGC 7635 / Caldwell 11', ra: 350.2180, dec: 61.2010, aliases: ['NGC 7635', 'Caldwell 11', 'Bubble Nebula', 'Sharpless 162'], category: 'nebula', desc: 'Spherical cosmic bubble blown by stellar winds from an ultra-hot Wolf-Rayet star.' },
+    { id: 'lagoon', name: '❄️ Lagoon Nebula (M8)', query: 'Lagoon Nebula', catalogId: 'M8 / NGC 6523', ra: 271.1370, dec: -24.3800, aliases: ['M8', 'NGC 6523', 'Lagoon Nebula', 'Messier 8', 'Sh2-25'], category: 'nebula', desc: 'Giant interstellar emission cloud classified as a vibrant H II region in Sagittarius.' },
+    { id: 'wizard', name: '🧙 Wizard Nebula (NGC 7380)', query: 'Wizard Nebula', catalogId: 'NGC 7380 / Sh2-142', ra: 341.7650, dec: 58.1000, aliases: ['NGC 7380', 'Sh2-142', 'Wizard Nebula'], category: 'nebula', desc: 'Open star cluster enshrouded in a celestial silhouette resembling a sorcerer.' },
+    { id: 'witch_head', name: '🌊 Witch Head Nebula', query: 'Witch Head Nebula', catalogId: 'IC 2118', ra: 75.5000, dec: -7.2167, aliases: ['IC 2118', 'Witch Head Nebula', 'Rigel Reflection'], category: 'nebula', desc: 'Faint blue reflection nebula illuminated by the blue supergiant star Rigel.' },
+    { id: 'hourglass', name: '👁️ Hourglass Nebula (MyCn 18)', query: 'Hourglass Nebula', catalogId: 'MyCn 18', ra: 204.8875, dec: -67.3800, aliases: ['MyCn 18', 'Hourglass Nebula', 'Engraved Hourglass'], category: 'nebula', desc: 'Young planetary nebula with precise pinched-waist geometric contours.' },
+    { id: 'cygnus_wall', name: '💎 Cygnus Wall (North America)', query: 'North America Nebula', catalogId: 'NGC 7000 / Caldwell 20', ra: 314.7500, dec: 44.3333, aliases: ['NGC 7000', 'Caldwell 20', 'North America Nebula', 'Cygnus Wall'], category: 'nebula', desc: 'Denser region of the North America Nebula featuring dramatic ridges of ionized gas.' },
+    { id: 'thors_helmet', name: '✨ Thor\'s Helmet (NGC 2359)', query: 'Thors Helmet', catalogId: 'NGC 2359 / Gum 4', ra: 109.6458, dec: -13.2106, aliases: ['NGC 2359', 'Gum 4', 'Thors Helmet', 'Thor\'s Helmet', 'Duck Nebula'], category: 'nebula', desc: 'Winged helmet shape blown out by a central Wolf-Rayet star.' },
+    { id: 'eta_carinae', name: '🚀 Eta Carinae Homunculus', query: 'Eta Carinae', catalogId: 'Eta Carinae', ra: 161.2650, dec: -59.6844, aliases: ['Eta Carinae', 'Homunculus Nebula', 'HD 93308'], category: 'nebula', desc: 'Bipolar lobes of incandescent gas expelled in the Great Eruption of 1843.' },
+    { id: 'mystic_mtn', name: '💎 Mystic Mountain (Carina)', query: 'Mystic Mountain', catalogId: 'NGC 3372 Pillar', ra: 161.2800, dec: -59.8000, aliases: ['Mystic Mountain', 'Carina Pillar', 'HH 901', 'HH 902'], category: 'nebula', desc: 'Three-light-year-tall pillar of gas and dust being assaulted by brilliant star radiation.' },
 
     // Galaxies & Deep Universe Surveys
-    { name: '🌀 Andromeda Galaxy (M31)', query: 'Andromeda Galaxy' },
-    { name: '🎡 Whirlpool Galaxy (M51)', query: 'Whirlpool Galaxy' },
-    { name: '👒 Sombrero Galaxy (M104)', query: 'Sombrero Galaxy' },
-    { name: '🪓 Phantom Galaxy (M74)', query: 'Phantom Galaxy' },
-    { name: '🎡 Cartwheel Galaxy', query: 'Cartwheel Galaxy' },
-    { name: '🌌 James Webb Deep Field', query: 'SMACS 0723' },
-    { name: '🔭 Hubble Ultra Deep Field', query: 'Hubble Ultra Deep Field' },
-    { name: '💫 Triangulum Galaxy (M33)', query: 'Triangulum Galaxy' },
-    { name: '🎆 Fireworks Galaxy (NGC 6946)', query: 'Fireworks Galaxy' },
-    { name: '🌪️ Black Eye Galaxy (M64)', query: 'Black Eye Galaxy' },
-    { name: '🪞 Pinwheel Galaxy (M101)', query: 'Pinwheel Galaxy' },
-    { name: '🦚 Stephan\'s Quintet (HCG 92)', query: 'Stephans Quintet' },
-    { name: '🛸 Cigar Galaxy (M82)', query: 'Cigar Galaxy' },
-    { name: '🌠 Centaurus A (NGC 5128)', query: 'Centaurus A' },
-    { name: '⚡ Antennae Galaxies (NGC 4038)', query: 'Antennae Galaxies' },
-    { name: '🧲 Sculptor Galaxy (NGC 253)', query: 'Sculptor Galaxy' },
-    { name: '🌊 Tadpole Galaxy (UGC 10214)', query: 'Tadpole Galaxy' },
-    { name: '🛰️ Large Magellanic Cloud', query: 'Large Magellanic Cloud' },
-    { name: '💫 Southern Pinwheel (M83)', query: 'Southern Pinwheel' },
-    { name: '🌌 Circinus Active Galaxy', query: 'Circinus Galaxy' },
+    { id: 'andromeda', name: '🌀 Andromeda Galaxy (M31)', query: 'Andromeda Galaxy', catalogId: 'M31 / NGC 224', ra: 10.6847, dec: 41.2687, aliases: ['M31', 'NGC 224', 'Andromeda Galaxy', 'Messier 31', 'UGC 454'], category: 'galaxy', desc: 'Nearest major spiral galaxy to the Milky Way, hosting over 1 trillion stars.' },
+    { id: 'whirlpool', name: '🎡 Whirlpool Galaxy (M51)', query: 'Whirlpool Galaxy', catalogId: 'M51 / NGC 5194', ra: 202.4696, dec: 47.1953, aliases: ['M51', 'NGC 5194', 'Whirlpool Galaxy', 'Messier 51', 'UGC 8493'], category: 'galaxy', desc: 'Grand-design spiral interacting with companion dwarf galaxy NGC 5195.' },
+    { id: 'sombrero', name: '👒 Sombrero Galaxy (M104)', query: 'Sombrero Galaxy', catalogId: 'M104 / NGC 4594', ra: 189.9976, dec: -11.6231, aliases: ['M104', 'NGC 4594', 'Sombrero Galaxy', 'Messier 104', 'Caldwell 61'], category: 'galaxy', desc: 'Lenticular galaxy with a bright nucleus and thick equatorial absorption dust lane.' },
+    { id: 'phantom', name: '🪓 Phantom Galaxy (M74)', query: 'Phantom Galaxy', catalogId: 'M74 / NGC 628', ra: 24.1740, dec: 15.7830, aliases: ['M74', 'NGC 628', 'Phantom Galaxy', 'Messier 74', 'UGC 1149'], category: 'galaxy', desc: 'Perfect face-on spiral galaxy exhibiting winding symmetrical spiral arms.' },
+    { id: 'cartwheel_gal', name: '🎡 Cartwheel Galaxy', query: 'Cartwheel Galaxy', catalogId: 'ESO 350-40 / PGC 2248', ra: 9.4340, dec: -33.7160, aliases: ['Cartwheel Galaxy', 'ESO 350-40', 'PGC 2248', 'A0035-33'], category: 'galaxy', desc: 'Magnificent ring galaxy created by a bullseye collision with a smaller companion.' },
+    { id: 'jwst_deep', name: '🌌 James Webb Deep Field', query: 'SMACS 0723', catalogId: 'SMACS J0723.3-7327', ra: 110.8375, dec: -73.4560, aliases: ['SMACS 0723', 'SMACS J0723.3-7327', 'JWST First Deep Field', 'Webb Deep Field'], category: 'galaxy', desc: 'Gravitational lens cluster magnifying the earliest galaxies in the infant universe.' },
+    { id: 'hudf', name: '🔭 Hubble Ultra Deep Field', query: 'Hubble Ultra Deep Field', catalogId: 'HUDF / Fornax Deep Field', ra: 53.1625, dec: -27.7914, aliases: ['HUDF', 'Hubble Ultra Deep Field', 'Fornax Deep Field'], category: 'galaxy', desc: 'Deepest visual portrait of the universe revealing 10,000 ancient galaxies.' },
+    { id: 'triangulum', name: '💫 Triangulum Galaxy (M33)', query: 'Triangulum Galaxy', catalogId: 'M33 / NGC 598', ra: 23.4621, dec: 30.6599, aliases: ['M33', 'NGC 598', 'Triangulum Galaxy', 'Messier 33', 'Pinwheel Galaxy', 'UGC 1117'], category: 'galaxy', desc: 'Third-largest galaxy in our Local Group, rich in massive starbirth complexes.' },
+    { id: 'fireworks', name: '🎆 Fireworks Galaxy (NGC 6946)', query: 'Fireworks Galaxy', catalogId: 'NGC 6946 / Caldwell 12', ra: 308.7180, dec: 60.1539, aliases: ['NGC 6946', 'Caldwell 12', 'Fireworks Galaxy', 'Arp 29'], category: 'galaxy', desc: 'Prolific supernova producer with 10 recorded supernovae in the last century.' },
+    { id: 'black_eye', name: '🌪️ Black Eye Galaxy (M64)', query: 'Black Eye Galaxy', catalogId: 'M64 / NGC 4826', ra: 194.1820, dec: 21.6820, aliases: ['M64', 'NGC 4826', 'Black Eye Galaxy', 'Evil Eye', 'Sleeping Beauty'], category: 'galaxy', desc: 'Striking dark band of absorbing dust occluding the inner galactic core.' },
+    { id: 'pinwheel_m101', name: '🪞 Pinwheel Galaxy (M101)', query: 'Pinwheel Galaxy', catalogId: 'M101 / NGC 5457', ra: 210.8024, dec: 54.3490, aliases: ['M101', 'NGC 5457', 'Pinwheel Galaxy', 'Messier 101', 'UGC 8981'], category: 'galaxy', desc: 'Vast spiral disc spanning 170,000 light-years packed with giant H II nebulae.' },
+    { id: 'stephans_quintet', name: '🦚 Stephan\'s Quintet (HCG 92)', query: 'Stephans Quintet', catalogId: 'HCG 92 / Arp 319', ra: 339.0146, dec: 33.9597, aliases: ['Stephans Quintet', 'HCG 92', 'NGC 7317', 'NGC 7318', 'NGC 7319', 'NGC 7320'], category: 'galaxy', desc: 'Compact galaxy group locked in a dramatic gravitational dance and shock fronts.' },
+    { id: 'cigar', name: '🛸 Cigar Galaxy (M82)', query: 'Cigar Galaxy', catalogId: 'M82 / NGC 3034', ra: 148.9685, dec: 69.6797, aliases: ['M82', 'NGC 3034', 'Cigar Galaxy', 'Messier 82', 'UGC 5322'], category: 'galaxy', desc: 'Prototypical starburst galaxy venting huge plumes of glowing red hydrogen gas.' },
+    { id: 'centaurus_a', name: '🌠 Centaurus A (NGC 5128)', query: 'Centaurus A', catalogId: 'NGC 5128 / Caldwell 77', ra: 201.3650, dec: -43.0190, aliases: ['NGC 5128', 'Cen A', 'Centaurus A', 'Caldwell 77'], category: 'galaxy', desc: 'Peculiar radio galaxy harboring a supermassive black hole with relativistic jets.' },
+    { id: 'antennae', name: '⚡ Antennae Galaxies (NGC 4038)', query: 'Antennae Galaxies', catalogId: 'NGC 4038 / NGC 4039', ra: 180.4700, dec: -18.8690, aliases: ['NGC 4038', 'NGC 4039', 'Antennae Galaxies', 'Arp 244', 'Caldwell 60'], category: 'galaxy', desc: 'Colliding galaxy pair flinging out vast tidal tails of stars and cosmic gas.' },
+    { id: 'sculptor', name: '🧲 Sculptor Galaxy (NGC 253)', query: 'Sculptor Galaxy', catalogId: 'NGC 253 / Silver Coin', ra: 11.8880, dec: -25.2880, aliases: ['NGC 253', 'Silver Coin', 'Sculptor Galaxy', 'Caldwell 65'], category: 'galaxy', desc: 'Star-forming intermediate spiral galaxy located in the southern constellation Sculptor.' },
+    { id: 'tadpole', name: '🌊 Tadpole Galaxy (UGC 10214)', query: 'Tadpole Galaxy', catalogId: 'UGC 10214 / Arp 188', ra: 241.5167, dec: 55.4286, aliases: ['UGC 10214', 'Arp 188', 'Tadpole Galaxy'], category: 'galaxy', desc: 'Disrupted barred spiral galaxy with a massive 280,000-light-year tidal tail.' },
+    { id: 'lmc', name: '🛰️ Large Magellanic Cloud', query: 'Large Magellanic Cloud', catalogId: 'LMC / ESO 56-115', ra: 80.8940, dec: -69.7560, aliases: ['LMC', 'Large Magellanic Cloud', 'ESO 56-115'], category: 'galaxy', desc: 'Satellite dwarf galaxy orbiting our Milky Way, home to the Tarantula Nebula.' },
+    { id: 'southern_pinwheel', name: '💫 Southern Pinwheel (M83)', query: 'Southern Pinwheel', catalogId: 'M83 / NGC 5236', ra: 204.2538, dec: -29.8658, aliases: ['M83', 'NGC 5236', 'Southern Pinwheel', 'Messier 83'], category: 'galaxy', desc: 'Barred spiral galaxy with prominent symmetric arms and frequent supernova bursts.' },
+    { id: 'circinus', name: '🌌 Circinus Active Galaxy', query: 'Circinus Galaxy', catalogId: 'ESO 097-G13', ra: 213.2917, dec: -65.3389, aliases: ['Circinus Galaxy', 'ESO 097-G13', 'Seyfert Galaxy'], category: 'galaxy', desc: 'Nearby active galaxy featuring a supermassive black hole ringed by dusty gas.' },
 
     // Black Holes, Star Clusters & Solar System Wonders
-    { name: '🕳️ M87 Black Hole Event Horizon', query: 'M87 Black Hole' },
-    { name: '💫 Sagittarius A* Galactic Core', query: 'Sagittarius A' },
-    { name: '🪐 Saturn Rings & Aurora', query: 'Saturn' },
-    { name: '🔴 Jupiter Great Red Spot', query: 'Jupiter' },
-    { name: '✨ Pleiades Cluster (M45)', query: 'Pleiades' },
-    { name: '⚡ Cassiopeia A Supernova', query: 'Cassiopeia A' },
-    { name: '🌟 Omega Centauri (NGC 5139)', query: 'Omega Centauri' },
-    { name: '☄️ Herbig-Haro 46/47 Jet', query: 'Herbig-Haro 46' },
-    { name: '🪐 Uranus Rings & Moons', query: 'Uranus' },
-    { name: '🌟 Westerlund 2 Star Cluster', query: 'Westerlund 2' },
-    { name: '🌪️ Crab Pulsar High-Energy Jet', query: 'Crab Pulsar' },
-    { name: '💫 WR 124 Wolf-Rayet Blossom', query: 'WR 124' },
-    { name: '⚡ Cosmic Seahorse Lensing', query: 'Cosmic Seahorse' },
-    { name: '💎 NGC 346 Stellar Nursery', query: 'NGC 346' },
-    { name: '☄️ Comet NEOWISE (C/2020 F3)', query: 'Comet NEOWISE' }
+    { id: 'm87', name: '🕳️ M87 Black Hole Event Horizon', query: 'M87 Black Hole', catalogId: 'M87 / Virgo A', ra: 187.7059, dec: 12.3911, aliases: ['M87', 'NGC 4486', 'Virgo A', 'M87 Black Hole', 'Powehi'], category: 'phenomenon', desc: 'Supermassive black hole shadow imaged by the Event Horizon Telescope.' },
+    { id: 'sgr_a', name: '💫 Sagittarius A* Galactic Core', query: 'Sagittarius A', catalogId: 'Sgr A*', ra: 266.4168, dec: -29.0078, aliases: ['Sgr A*', 'Sagittarius A*', 'Milky Way Core', 'Galactic Center'], category: 'phenomenon', desc: 'The 4-million-solar-mass supermassive black hole at the center of the Milky Way.' },
+    { id: 'saturn', name: '🪐 Saturn Rings & Aurora', query: 'Saturn', catalogId: 'Saturn System', ra: 340.5000, dec: -10.2000, aliases: ['Saturn', 'Saturn Rings', 'Cassini Division'], category: 'solar_system', desc: 'The jewel of the solar system with magnificent icy rings and polar aurora.' },
+    { id: 'jupiter', name: '🔴 Jupiter Great Red Spot', query: 'Jupiter', catalogId: 'Jupiter System', ra: 65.0000, dec: 21.0000, aliases: ['Jupiter', 'Great Red Spot', 'Jovian Aurora'], category: 'solar_system', desc: 'Solar system\'s largest gas giant with its 300-year-old anticyclonic storm.' },
+    { id: 'pleiades', name: '✨ Pleiades Cluster (M45)', query: 'Pleiades', catalogId: 'M45 / Melotte 22', ra: 56.7500, dec: 24.1170, aliases: ['M45', 'Pleiades', 'Seven Sisters', 'Subaru', 'Messier 45'], category: 'cluster', desc: 'Brilliant blue open cluster enmeshed in luminous reflection dust nebulosity.' },
+    { id: 'cas_a', name: '⚡ Cassiopeia A Supernova', query: 'Cassiopeia A', catalogId: 'Cas A / 3C 461', ra: 350.8500, dec: 58.8150, aliases: ['Cas A', 'Cassiopeia A', '3C 461', 'Supernova Remnant'], category: 'phenomenon', desc: 'Brightest astronomical radio source beyond our solar system, an expanding blast wave.' },
+    { id: 'omega_cen', name: '🌟 Omega Centauri (NGC 5139)', query: 'Omega Centauri', catalogId: 'NGC 5139 / Caldwell 80', ra: 201.6970, dec: -47.4770, aliases: ['NGC 5139', 'Caldwell 80', 'Omega Centauri', 'Globular Cluster'], category: 'cluster', desc: 'Vast globular cluster containing 10 million stars, the core remnant of a dwarf galaxy.' },
+    { id: 'hh46_47', name: '☄️ Herbig-Haro 46/47 Jet', query: 'Herbig-Haro 46', catalogId: 'HH 46/47', ra: 129.8333, dec: -51.0500, aliases: ['HH 46', 'HH 47', 'HH 46/47', 'Herbig-Haro 46'], category: 'phenomenon', desc: 'High-speed bipolar stellar jets blasting out from a deeply embedded proto-star pair.' },
+    { id: 'uranus', name: '🪐 Uranus Rings & Moons', query: 'Uranus', catalogId: 'Uranus System', ra: 51.5000, dec: 18.2000, aliases: ['Uranus', 'Uranus Rings', 'Ice Giant'], category: 'solar_system', desc: 'Tilted ice giant with delicate dust rings and orbiting moons captured by JWST.' },
+    { id: 'westerlund2', name: '🌟 Westerlund 2 Star Cluster', query: 'Westerlund 2', catalogId: 'Westerlund 2', ra: 155.9750, dec: -57.7667, aliases: ['Westerlund 2', 'RCW 49', 'Gum 29'], category: 'cluster', desc: 'Compact young starburst cluster containing some of the most massive stars known.' },
+    { id: 'crab_pulsar', name: '🌪️ Crab Pulsar High-Energy Jet', query: 'Crab Pulsar', catalogId: 'PSR B0531+21', ra: 83.6332, dec: 22.0145, aliases: ['Crab Pulsar', 'PSR B0531+21', 'NP 0532'], category: 'phenomenon', desc: 'Rapidly rotating neutron star spinning 30 times a second at the center of M1.' },
+    { id: 'wr124', name: '💫 WR 124 Wolf-Rayet Blossom', query: 'WR 124', catalogId: 'WR 124 / Hen 2-427', ra: 287.9542, dec: 16.8639, aliases: ['WR 124', 'Hen 2-427', 'Wolf-Rayet 124'], category: 'phenomenon', desc: 'Luminous supermassive dying star shedding its outer layers in a cosmic halo.' },
+    { id: 'seahorse', name: '⚡ Cosmic Seahorse Lensing', query: 'Cosmic Seahorse', catalogId: 'SMACS J0723 Seahorse', ra: 110.8500, dec: -73.4600, aliases: ['Cosmic Seahorse', 'Gravitational Lens Arc'], category: 'galaxy', desc: 'Highly magnified, distorted cosmic arc of an ancient galaxy warped by gravity.' },
+    { id: 'ngc346', name: '💎 NGC 346 Stellar Nursery', query: 'NGC 346', catalogId: 'NGC 346 / SMC', ra: 14.7750, dec: -72.1722, aliases: ['NGC 346', 'Small Magellanic Cloud Nursery'], category: 'nebula', desc: 'Dynamic star-forming region in the Small Magellanic Cloud filled with infant stars.' },
+    { id: 'neowise', name: '☄️ Comet NEOWISE (C/2020 F3)', query: 'Comet NEOWISE', catalogId: 'C/2020 F3 NEOWISE', ra: 165.0000, dec: 45.0000, aliases: ['C/2020 F3', 'Comet NEOWISE', 'NEOWISE'], category: 'solar_system', desc: 'Spectacular bright naked-eye retrograde comet with glowing ion and dust tails.' }
   ];
+
+  /**
+   * Helper to look up an object in the POPULAR_DISCOVERIES table by query, catalogId, or aliases.
+   */
+  function findPopularDiscovery(q) {
+    if (!q) return null;
+    const s = q.trim().toLowerCase();
+    return POPULAR_DISCOVERIES.find(item => {
+      if (item.name.toLowerCase().includes(s)) return true;
+      if (item.query.toLowerCase() === s) return true;
+      if (item.catalogId && item.catalogId.toLowerCase().includes(s)) return true;
+      if (item.aliases && item.aliases.some(a => a.toLowerCase() === s || s.includes(a.toLowerCase()))) return true;
+      return false;
+    }) || null;
+  }
 
   let cameraEngine = null;
   let gradingEngine = new GradingEngine();
@@ -333,6 +393,7 @@
 
     // Preload default target in memory for instant readiness
     loadImageFromCatalog('carina', false);
+    updateTopBarGeometry();
 
     // Wire toast dismiss and HUD click
     if (btnCloseToast && toastSpecs) {
@@ -353,6 +414,22 @@
   }
 
   /**
+   * Dynamically calculates top-bar geometry and sets --top-bar-bottom CSS variable
+   * to guarantee studio drawers and floating telemetry never overlap the header or workflow tabs.
+   */
+  function updateTopBarGeometry() {
+    if (typeof document === 'undefined') return;
+    const topBar = document.querySelector('.top-bar');
+    if (topBar) {
+      const rect = topBar.getBoundingClientRect();
+      const bottom = Math.round(rect.bottom);
+      if (bottom > 0) {
+        document.documentElement.style.setProperty('--top-bar-bottom', `${bottom}px`);
+      }
+    }
+  }
+
+  /**
    * Screen Switcher: Transitions smoothly between Discovery and Studio
    */
   function switchToScreen(screenName) {
@@ -367,6 +444,7 @@
     } else {
       screenDiscovery.classList.add('hidden');
       screenStudio.classList.remove('hidden');
+      updateTopBarGeometry();
       resizeViewport();
       drawRadarBackground();
       updateSplineEditorView();
@@ -1977,8 +2055,16 @@
           btn.type = 'button';
           btn.className = 'quick-topic-btn';
           btn.dataset.query = item.query;
+          if (item.catalogId) btn.dataset.catalogId = item.catalogId;
+          if (item.ra !== undefined) btn.dataset.ra = String(item.ra);
+          if (item.dec !== undefined) btn.dataset.dec = String(item.dec);
+          if (item.aliases) btn.dataset.aliases = item.aliases.join(', ');
           btn.textContent = item.name;
-          btn.title = `Search archives for: ${item.name}`;
+          const coordsStr = (item.ra !== undefined && item.dec !== undefined)
+            ? ` • RA: ${item.ra.toFixed(2)}°, Dec: ${(item.dec >= 0 ? '+' : '') + item.dec.toFixed(2)}°`
+            : '';
+          const aliasStr = item.aliases && item.aliases.length > 0 ? ` • Alt: ${item.aliases.slice(0, 3).join(', ')}` : '';
+          btn.title = `Search archives for: ${item.name} (${item.catalogId || item.query})${coordsStr}${aliasStr}`;
           btn.addEventListener('click', () => {
             searchInput.value = item.query;
             btnClearSearch.style.display = 'block';
@@ -2475,6 +2561,20 @@
         }
       }
 
+      // 2b. Check if query matches our extensive POPULAR_DISCOVERIES catalog table with celestial coordinates & aliases
+      if (targets.length === 0) {
+        const pop = findPopularDiscovery(qRaw);
+        if (pop && pop.ra !== undefined && pop.dec !== undefined) {
+          targets.push({
+            name: `${pop.name} (${pop.catalogId || pop.query})`,
+            ra: pop.ra,
+            dec: pop.dec,
+            scale: pop.category === 'galaxy' ? 0.6 : (pop.category === 'cluster' ? 0.8 : 0.5),
+            desc: `${pop.desc || 'Popular astronomical discovery.'} Designation: ${pop.catalogId || 'N/A'}. RA ${pop.ra.toFixed(4)}°, Dec ${(pop.dec >= 0 ? '+' : '') + pop.dec.toFixed(4)}°.`
+          });
+        }
+      }
+
       // 3. If still no targets, resolve via Sesame mirror (Harvard & IDIA with CORS)
       if (targets.length === 0 && qRaw.length >= 2) {
         const resolved = await resolveTargetViaSesame(qRaw);
@@ -2630,11 +2730,13 @@
       }
 
       const results = [];
+      const popTarget = findPopularDiscovery(query);
+      const canonicalQuery = popTarget ? popTarget.query : (query || '').trim();
 
       // 1. Fetch NASA Library
       const fetchNasa = async () => {
         try {
-          const qClean = (query || '').trim();
+          const qClean = canonicalQuery;
           const nasaQ = (!qClean || qClean === 'all' || qClean === 'surveys') ? 'deep space nebula' : qClean;
           const url = `https://images-api.nasa.gov/search?q=${encodeURIComponent(nasaQ)}&media_type=image`;
           const resp = await fetch(url);
@@ -3147,6 +3249,7 @@
         if (!isAlreadyActive && targetDrawer) {
           btn.classList.add('active');
           targetDrawer.classList.add('active');
+          updateTopBarGeometry();
 
           if (targetDrawerId === 'drawer-spline') {
             setTimeout(updateSplineEditorView, 50);
@@ -3639,6 +3742,7 @@
     });
 
     window.addEventListener('resize', () => {
+      updateTopBarGeometry();
       resizeViewport();
       updateSplineEditorView();
     });

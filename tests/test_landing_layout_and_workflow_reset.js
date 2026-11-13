@@ -30,14 +30,14 @@ assert(indexHtml.includes('<aside class="discovery-sidebar">'),
   'index.html must declare .discovery-sidebar as Column 1');
 assert(indexHtml.includes('<section class="discovery-showcase-column">'), 
   'index.html must declare .discovery-showcase-column for Columns 2 & 3');
-assert(indexHtml.includes('class="celestial-grid celestial-grid-2col"'), 
-  'Showcase must use .celestial-grid-2col for 2-column card presentation');
+assert(indexHtml.includes('class="celestial-grid celestial-grid-3x3"'), 
+  'Showcase must use .celestial-grid-3x3 for 3x3 grid presentation');
 
 assert(styleCss.includes('.discovery-body.discovery-3col'), 
   'style.css must define 3-column discovery layout rules');
-assert(styleCss.includes('.celestial-grid-2col'), 
-  'style.css must define .celestial-grid-2col 2-column rules');
-console.log('✓ 3-Column layout architecture verified in index.html and style.css.');
+assert(styleCss.includes('.celestial-grid-3x3'), 
+  'style.css must define .celestial-grid-3x3 rules');
+console.log('✓ 3-Column layout architecture and 3x3 grid verified in index.html and style.css.');
 
 // ---------------------------------------------------------------------------
 // Test 2: Extensive Sanitized Popular Discoveries Matrix (3 Rows & Randomization)
@@ -51,13 +51,21 @@ assert(popularDiscoveries.length >= 50,
   `POPULAR_DISCOVERIES must contain an extensive list (>= 50), got ${popularDiscoveries.length}`);
 console.log(`✓ POPULAR_DISCOVERIES contains ${popularDiscoveries.length} sanitized celestial discoveries.`);
 
-// Verify sanitation of titles (clean, emoji icons, no raw underscores or ugly filenames)
+// Verify sanitation of titles (clean, emoji icons, no raw underscores or ugly filenames) and coordinates/aliases
 for (const item of popularDiscoveries) {
   assert(item.name && item.query, 'Each item must have a name and query');
+  assert(typeof item.ra === 'number', `Item "${item.name}" must have numeric RA coordinate`);
+  assert(typeof item.dec === 'number', `Item "${item.name}" must have numeric Dec coordinate`);
+  assert(Array.isArray(item.aliases) && item.aliases.length > 0, `Item "${item.name}" must have aliases array`);
+  assert(item.catalogId, `Item "${item.name}" must have catalogId designation`);
   assert(!item.name.includes('_'), `Item name "${item.name}" must not contain raw underscores`);
   assert(!item.name.toLowerCase().endsWith('.jpg'), `Item name "${item.name}" must not have .jpg extension`);
   assert(!item.name.toLowerCase().endsWith('.png'), `Item name "${item.name}" must not have .png extension`);
 }
+console.log('✓ All 60+ discovery titles, RA/Dec coordinates and alias arrays verified.');
+
+assert(wallpaperJs.includes('function findPopularDiscovery('), 
+  'wallpaper.js must define findPopularDiscovery helper function');
 console.log('✓ All 60+ discovery titles verified as cleanly sanitized for display.');
 
 // Verify 3 rows rendering logic in wallpaper.js and index.html
