@@ -136,6 +136,75 @@
   let activeImageSpecs = null;
   let toastDismissTimeout = null;
 
+  // Extensive Master List of Popular Discoveries (Sanitized & Categorized for 3-Row Matrix)
+  const POPULAR_DISCOVERIES = [
+    // Nebulae & Cosmic Gas Clouds
+    { name: '🔭 Orion Nebula (M42)', query: 'Orion Nebula' },
+    { name: '🏛️ Pillars of Creation', query: 'Pillars of Creation' },
+    { name: '⛰️ Cosmic Cliffs (Carina)', query: 'Carina Nebula' },
+    { name: '🦀 Crab Nebula (M1)', query: 'Crab Nebula' },
+    { name: '🦋 Butterfly Nebula (NGC 6302)', query: 'Butterfly Nebula' },
+    { name: '💍 Southern Ring (NGC 3132)', query: 'Southern Ring Nebula' },
+    { name: '🕸️ Tarantula Nebula (30 Doradus)', query: 'Tarantula Nebula' },
+    { name: '🐴 Horsehead Nebula (B33)', query: 'Horsehead Nebula' },
+    { name: '🔮 Helix Nebula (NGC 7293)', query: 'Helix Nebula' },
+    { name: '🐈 Cat\'s Eye Nebula (NGC 6543)', query: 'Cats Eye Nebula' },
+    { name: '🦭 Ring Nebula (M57)', query: 'Ring Nebula' },
+    { name: '🌌 Veil Nebula Supernova Remnant', query: 'Veil Nebula' },
+    { name: '🦅 Eagle Nebula Core (M16)', query: 'Eagle Nebula' },
+    { name: '🌺 Rosette Nebula (NGC 2237)', query: 'Rosette Nebula' },
+    { name: '💥 Supernova Remnant 1987A', query: 'Supernova 1987A' },
+    { name: '🕯️ Cone Nebula (NGC 2264)', query: 'Cone Nebula' },
+    { name: '🫧 Bubble Nebula (NGC 7635)', query: 'Bubble Nebula' },
+    { name: '❄️ Lagoon Nebula (M8)', query: 'Lagoon Nebula' },
+    { name: '🧙 Wizard Nebula (NGC 7380)', query: 'Wizard Nebula' },
+    { name: '🌊 Witch Head Nebula', query: 'Witch Head Nebula' },
+    { name: '👁️ Hourglass Nebula (MyCn 18)', query: 'Hourglass Nebula' },
+    { name: '💎 Cygnus Wall (North America)', query: 'North America Nebula' },
+    { name: '✨ Thor\'s Helmet (NGC 2359)', query: 'Thors Helmet' },
+    { name: '🚀 Eta Carinae Homunculus', query: 'Eta Carinae' },
+    { name: '💎 Mystic Mountain (Carina)', query: 'Mystic Mountain' },
+
+    // Galaxies & Deep Universe Surveys
+    { name: '🌀 Andromeda Galaxy (M31)', query: 'Andromeda Galaxy' },
+    { name: '🎡 Whirlpool Galaxy (M51)', query: 'Whirlpool Galaxy' },
+    { name: '👒 Sombrero Galaxy (M104)', query: 'Sombrero Galaxy' },
+    { name: '🪓 Phantom Galaxy (M74)', query: 'Phantom Galaxy' },
+    { name: '🎡 Cartwheel Galaxy', query: 'Cartwheel Galaxy' },
+    { name: '🌌 James Webb Deep Field', query: 'SMACS 0723' },
+    { name: '🔭 Hubble Ultra Deep Field', query: 'Hubble Ultra Deep Field' },
+    { name: '💫 Triangulum Galaxy (M33)', query: 'Triangulum Galaxy' },
+    { name: '🎆 Fireworks Galaxy (NGC 6946)', query: 'Fireworks Galaxy' },
+    { name: '🌪️ Black Eye Galaxy (M64)', query: 'Black Eye Galaxy' },
+    { name: '🪞 Pinwheel Galaxy (M101)', query: 'Pinwheel Galaxy' },
+    { name: '🦚 Stephan\'s Quintet (HCG 92)', query: 'Stephans Quintet' },
+    { name: '🛸 Cigar Galaxy (M82)', query: 'Cigar Galaxy' },
+    { name: '🌠 Centaurus A (NGC 5128)', query: 'Centaurus A' },
+    { name: '⚡ Antennae Galaxies (NGC 4038)', query: 'Antennae Galaxies' },
+    { name: '🧲 Sculptor Galaxy (NGC 253)', query: 'Sculptor Galaxy' },
+    { name: '🌊 Tadpole Galaxy (UGC 10214)', query: 'Tadpole Galaxy' },
+    { name: '🛰️ Large Magellanic Cloud', query: 'Large Magellanic Cloud' },
+    { name: '💫 Southern Pinwheel (M83)', query: 'Southern Pinwheel' },
+    { name: '🌌 Circinus Active Galaxy', query: 'Circinus Galaxy' },
+
+    // Black Holes, Star Clusters & Solar System Wonders
+    { name: '🕳️ M87 Black Hole Event Horizon', query: 'M87 Black Hole' },
+    { name: '💫 Sagittarius A* Galactic Core', query: 'Sagittarius A' },
+    { name: '🪐 Saturn Rings & Aurora', query: 'Saturn' },
+    { name: '🔴 Jupiter Great Red Spot', query: 'Jupiter' },
+    { name: '✨ Pleiades Cluster (M45)', query: 'Pleiades' },
+    { name: '⚡ Cassiopeia A Supernova', query: 'Cassiopeia A' },
+    { name: '🌟 Omega Centauri (NGC 5139)', query: 'Omega Centauri' },
+    { name: '☄️ Herbig-Haro 46/47 Jet', query: 'Herbig-Haro 46' },
+    { name: '🪐 Uranus Rings & Moons', query: 'Uranus' },
+    { name: '🌟 Westerlund 2 Star Cluster', query: 'Westerlund 2' },
+    { name: '🌪️ Crab Pulsar High-Energy Jet', query: 'Crab Pulsar' },
+    { name: '💫 WR 124 Wolf-Rayet Blossom', query: 'WR 124' },
+    { name: '⚡ Cosmic Seahorse Lensing', query: 'Cosmic Seahorse' },
+    { name: '💎 NGC 346 Stellar Nursery', query: 'NGC 346' },
+    { name: '☄️ Comet NEOWISE (C/2020 F3)', query: 'Comet NEOWISE' }
+  ];
+
   let cameraEngine = null;
   let gradingEngine = new GradingEngine();
   let rawSourceImage = new Image();
@@ -153,6 +222,43 @@
   let isRadarActive = true;
   let isHudManuallyHidden = false;
   let hudHideTimeout = null;
+
+  /**
+   * Applies and synchronizes loop duration across state, camera engine, UI, and timeline.
+   */
+  function applyLoopDuration(newSec) {
+    const val = parseInt(newSec, 10);
+    if (isNaN(val) || val <= 0) return;
+    loopDurationSec = val;
+    const dSelect = document.getElementById('select-duration');
+    if (dSelect && dSelect.value !== String(val)) {
+      dSelect.value = String(val);
+    }
+    if (cameraEngine) cameraEngine.setDuration(loopDurationSec);
+    updateScrubberUI();
+  }
+
+  /**
+   * Resets the studio workflow drawer state back to Step 1 (Color Grading & Look)
+   * whenever a new celestial vista is loaded.
+   */
+  function resetWorkflowToStep1(openDrawer = true) {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const drawers = document.querySelectorAll('.studio-drawer');
+
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    drawers.forEach(d => d.classList.remove('active'));
+
+    const step1Tab = document.querySelector('.step-tab[data-drawer="drawer-grade"]');
+    const drawerGrade = document.getElementById('drawer-grade');
+
+    if (openDrawer && step1Tab && drawerGrade) {
+      step1Tab.classList.add('active');
+      drawerGrade.classList.add('active');
+    }
+
+    selectedWpIndex = 0;
+  }
   let isRecording = false;
 
   // Selected waypoint index for spline editor
@@ -581,7 +687,7 @@
             // 2. Restore motion, speed, & spline waypoints
             if (recipe.cameraKinematics) {
               const ck = recipe.cameraKinematics;
-              if (ck.loopDurationSec) loopDurationSec = ck.loopDurationSec;
+              if (ck.loopDurationSec) applyLoopDuration(ck.loopDurationSec);
               if (ck.speedMultiplier) {
                 speedMultiplier = ck.speedMultiplier;
                 const spdEl = document.getElementById('select-speed');
@@ -738,12 +844,15 @@
         });
       } else {
         cameraEngine.setImageDimensions(rawSourceImage.naturalWidth, rawSourceImage.naturalHeight);
+        cameraEngine.setDuration(loopDurationSec);
       }
+      updateScrubberUI();
 
       resizeViewport();
       drawRadarBackground();
       updateSplineEditorView();
       runAutoGradeTelemetry();
+      resetWorkflowToStep1(true);
 
       // Calculate and display resolution & quality telemetry
       const specs = calculateImageQualitySpecs(rawSourceImage, 0, isCanvasTainted);
@@ -1820,16 +1929,6 @@
       renderCuratedCards(activeFilter, '');
     });
 
-    // Quick Search Topic suggestions
-    document.querySelectorAll('.quick-topic-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const query = btn.dataset.query;
-        searchInput.value = query;
-        btnClearSearch.style.display = 'block';
-        triggerArchiveSearch();
-      });
-    });
-
     // Search action trigger
     const triggerArchiveSearch = () => {
       const q = searchInput.value.trim();
@@ -1845,6 +1944,60 @@
       const defaultQ = (source === 'eso') ? 'eso' : (source === 'chandra') ? 'chandra' : 'surveys';
       searchGlobalArchives(q || defaultQ, source);
     };
+
+    // Render Popular Discoveries (3 Rows, Randomized at Start)
+    function renderPopularDiscoveries() {
+      const matrix = document.getElementById('popular-discoveries-matrix');
+      if (!matrix) return;
+
+      // Shuffle master pool using Fisher-Yates
+      const pool = [...POPULAR_DISCOVERIES];
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+
+      // Populate 3 rows with 5 unique discoveries each (total 15 items displayed)
+      const itemsPerRow = 5;
+      const rows = [
+        pool.slice(0, itemsPerRow),
+        pool.slice(itemsPerRow, itemsPerRow * 2),
+        pool.slice(itemsPerRow * 2, itemsPerRow * 3)
+      ];
+
+      matrix.innerHTML = '';
+      rows.forEach((rowItems, rIdx) => {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'popular-row';
+        rowEl.setAttribute('role', 'group');
+        rowEl.setAttribute('aria-label', `Popular Discoveries Row ${rIdx + 1}`);
+
+        rowItems.forEach(item => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'quick-topic-btn';
+          btn.dataset.query = item.query;
+          btn.textContent = item.name;
+          btn.title = `Search archives for: ${item.name}`;
+          btn.addEventListener('click', () => {
+            searchInput.value = item.query;
+            btnClearSearch.style.display = 'block';
+            triggerArchiveSearch();
+          });
+          rowEl.appendChild(btn);
+        });
+        matrix.appendChild(rowEl);
+      });
+    }
+
+    renderPopularDiscoveries();
+
+    const btnShuffle = document.getElementById('btn-shuffle-discoveries');
+    if (btnShuffle) {
+      btnShuffle.addEventListener('click', () => {
+        renderPopularDiscoveries();
+      });
+    }
 
     if (btnSearchNasa) btnSearchNasa.addEventListener('click', triggerArchiveSearch);
     searchInput.addEventListener('keydown', (e) => {
@@ -3377,13 +3530,26 @@
       resizeViewport();
     });
 
-    // Duration selector
+    // Duration selector: immediately sync initial state and listen to both change & input
     const durationSelect = document.getElementById('select-duration');
-    durationSelect.addEventListener('change', (e) => {
-      loopDurationSec = parseInt(e.target.value, 10);
+    if (durationSelect) {
+      if (durationSelect.value) {
+        const initSec = parseInt(durationSelect.value, 10);
+        if (!isNaN(initSec) && initSec > 0) {
+          loopDurationSec = initSec;
+        }
+      } else {
+        durationSelect.value = String(loopDurationSec);
+      }
       if (cameraEngine) cameraEngine.setDuration(loopDurationSec);
       updateScrubberUI();
-    });
+
+      const onDurationInput = (e) => {
+        applyLoopDuration(e.target.value);
+      };
+      durationSelect.addEventListener('change', onDurationInput);
+      durationSelect.addEventListener('input', onDurationInput);
+    }
 
     // Play/Pause button
     const btnPlayPause = document.getElementById('btn-play-pause');

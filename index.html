@@ -79,45 +79,87 @@
       </div>
     </header>
 
-    <!-- Main Discovery Body -->
-    <main class="discovery-body">
-      <!-- Search & Exploration Hero -->
-      <section class="discovery-hero">
-        <div class="hero-content">
-          <h2 class="hero-title">Step 1: Discover Your Celestial Vista</h2>
-          <p class="hero-desc">
+    <!-- Main Discovery Body: 3-Column Layout -->
+    <main class="discovery-body discovery-3col">
+      <!-- COLUMN 1: Vista Selection & Discovery Controls Sidebar -->
+      <aside class="discovery-sidebar">
+        <!-- Hero Header inside sidebar -->
+        <div class="sidebar-header">
+          <h2 class="sidebar-title">Step 1: Discover Your Celestial Vista</h2>
+          <p class="sidebar-desc">
             Explore breathtaking deep space phenomena, search NASA & ESA/ESO Wikimedia archives, or upload your own 4K/8K wallpaper.
             Every scene is graded for true OLED <code>#000000</code> blacks and animated with a seamless, jerk-free 60 FPS camera loop.
           </p>
         </div>
 
         <!-- Global Search Bar & Multi-Archive Selector -->
-        <div class="search-box-container">
-          <select id="select-archive-source" class="search-archive-select" title="Choose which space archive to search">
-            <option value="all">🌐 All Sources (Surveys + ESO + Chandra + NASA)</option>
-            <option value="eso">🏔️ ESO & VLT Masters (16–116 MP Ultra-HD)</option>
-            <option value="chandra">⚡ Chandra X-Ray (Pure OLED Black #000000)</option>
-            <option value="surveys">🔭 Deep Sky Surveys (DECam / unWISE Cutouts)</option>
-            <option value="nasa">🚀 NASA Archives (Hubble, JWST, JPL)</option>
-            <option value="wikimedia">🌌 Wikimedia Astrophotography (Public Domain)</option>
-          </select>
-          <div class="search-input-wrapper">
-            <span class="search-icon">🔍</span>
-            <input 
-              type="text" 
-              id="global-cosmic-search" 
-              placeholder="Search cosmic targets or coordinates (e.g. Orion, M31, NGC 3324, 83.82, -5.39)..."
-              autocomplete="off"
-            >
-            <button id="btn-clear-search" class="btn-clear" style="display: none;">&times;</button>
+        <div class="sidebar-panel search-panel">
+          <div class="panel-header-row">
+            <span class="panel-label">🔍 SEARCH SPACE ARCHIVES</span>
           </div>
-          <button id="btn-search-nasa-action" class="btn-nasa-search" title="Search public archives in real-time">
-            🚀 Search Archives
-          </button>
+          <div class="search-box-container">
+            <select id="select-archive-source" class="search-archive-select" title="Choose which space archive to search">
+              <option value="all">🌐 All Sources (Surveys + ESO + Chandra + NASA)</option>
+              <option value="eso">🏔️ ESO & VLT Masters (16–116 MP Ultra-HD)</option>
+              <option value="chandra">⚡ Chandra X-Ray (Pure OLED Black #000000)</option>
+              <option value="surveys">🔭 Deep Sky Surveys (DECam / unWISE Cutouts)</option>
+              <option value="nasa">🚀 NASA Archives (Hubble, JWST, JPL)</option>
+              <option value="wikimedia">🌌 Wikimedia Astrophotography (Public Domain)</option>
+            </select>
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input 
+                type="text" 
+                id="global-cosmic-search" 
+                placeholder="Search cosmic targets or coordinates (e.g. Orion, M31, NGC 3324, 83.82, -5.39)..."
+                autocomplete="off"
+              >
+              <button id="btn-clear-search" class="btn-clear" style="display: none;">&times;</button>
+            </div>
+            <button id="btn-search-nasa-action" class="btn-nasa-search" title="Search public archives in real-time">
+              🚀 Search Archives
+            </button>
+          </div>
         </div>
 
-        <!-- Direct Upload & Direct Web URL (Prominently Placed at Top) -->
-        <section id="section-custom-sources" class="custom-sources-panel">
+        <!-- Popular Discoveries Matrix (3 Rows, Randomized at Start) -->
+        <div class="sidebar-panel popular-discoveries-panel">
+          <div class="popular-discoveries-header">
+            <div class="popular-header-left">
+              <span class="panel-icon">✨</span>
+              <span class="panel-label">POPULAR DISCOVERIES</span>
+            </div>
+            <button id="btn-shuffle-discoveries" class="btn-shuffle-discoveries" type="button" title="Shuffle new randomized astronomical discoveries">
+              🎲 Shuffle
+            </button>
+          </div>
+          <div class="popular-discoveries-rows" id="popular-discoveries-matrix">
+            <!-- 3 Rows dynamically populated from POPULAR_DISCOVERIES on start -->
+          </div>
+        </div>
+
+        <!-- Category Filter Chips -->
+        <div class="sidebar-panel filters-panel">
+          <div class="panel-header-row">
+            <span class="panel-label">🏷️ CURATED SHOWCASE CATEGORIES</span>
+          </div>
+          <div class="category-chips-scroll">
+            <button class="chip active" data-filter="all">🌟 All Curated (6)</button>
+            <button class="chip" data-filter="cliffs">⛰️ Cosmic Cliffs</button>
+            <button class="chip" data-filter="pillars">🏛️ Pillars of Creation</button>
+            <button class="chip" data-filter="galaxies">🌀 Spiral Galaxies</button>
+            <button class="chip" data-filter="webs">🕸️ Nebular Webs</button>
+            <button class="chip" data-filter="rings">💍 Stellar Rings</button>
+            <button class="chip chip-nasa" data-filter="nasa-archive">🌐 Global Space Archives</button>
+            <button class="chip chip-upload" data-filter="custom-upload">📁 Upload / Custom</button>
+          </div>
+        </div>
+
+        <!-- Direct Upload & Direct Web URL (Prominently Placed in Sidebar) -->
+        <div class="sidebar-panel custom-sources-panel" id="section-custom-sources">
+          <div class="panel-header-row">
+            <span class="panel-label">📁 CUSTOM SOURCES & DROPZONE</span>
+          </div>
           <div class="custom-card upload-dropzone-card" id="dropzone-box" title="Drag and drop or click to upload your high-resolution image">
             <div class="dropzone-icon">📁</div>
             <div class="dropzone-text">
@@ -140,58 +182,38 @@
               <button id="btn-fetch-custom-url" class="btn-primary">Load &rarr;</button>
             </div>
           </div>
+        </div>
+      </aside>
+
+      <!-- COLUMNS 2 & 3: Main Showcase & Search Results Grid (Spans 2 columns) -->
+      <section class="discovery-showcase-column">
+        <!-- Section A: Curated Showcase Grid (Default 6 Vistas in 2 Columns) -->
+        <section id="section-curated-grid" class="cards-section">
+          <div class="section-heading-row">
+            <h3 class="section-title">✨ Curated Astronomical Masterpieces (Instant Offline Loading)</h3>
+            <span class="section-count" id="curated-count">6 Objects</span>
+          </div>
+
+          <div class="celestial-grid celestial-grid-2col" id="curated-cards-container">
+            <!-- Populated dynamically with high-speed local WebP thumbnails -->
+          </div>
         </section>
 
-        <!-- Quick Topics Suggestion Row -->
-        <div class="quick-topics-row">
-          <span>Popular Discoveries:</span>
-          <button class="quick-topic-btn" data-query="Orion Nebula">🔭 Orion Nebula</button>
-          <button class="quick-topic-btn" data-query="Andromeda Galaxy">🌀 Andromeda Galaxy</button>
-          <button class="quick-topic-btn" data-query="Black Hole">🕳️ Black Hole</button>
-          <button class="quick-topic-btn" data-query="Crab Nebula">🦀 Crab Nebula</button>
-          <button class="quick-topic-btn" data-query="Saturn Rings">🪐 Saturn Rings</button>
-          <button class="quick-topic-btn" data-query="Deep Field">🌌 Deep Field</button>
-        </div>
-
-        <!-- Category Filter Chips -->
-        <div class="category-chips-scroll">
-          <button class="chip active" data-filter="all">🌟 All Curated (6)</button>
-          <button class="chip" data-filter="cliffs">⛰️ Cosmic Cliffs</button>
-          <button class="chip" data-filter="pillars">🏛️ Pillars of Creation</button>
-          <button class="chip" data-filter="galaxies">🌀 Spiral Galaxies</button>
-          <button class="chip" data-filter="webs">🕸️ Nebular Webs</button>
-          <button class="chip" data-filter="rings">💍 Stellar Rings</button>
-          <button class="chip chip-nasa" data-filter="nasa-archive">🌐 Global Space Archives</button>
-          <button class="chip chip-upload" data-filter="custom-upload">📁 Upload / Custom</button>
-        </div>
-      </section>
-
-      <!-- Section A: Curated Showcase Grid -->
-      <section id="section-curated-grid" class="cards-section">
-        <div class="section-heading-row">
-          <h3 class="section-title">✨ Curated Astronomical Masterpieces (Instant Offline Loading)</h3>
-          <span class="section-count" id="curated-count">6 Objects</span>
-        </div>
-
-        <div class="celestial-grid" id="curated-cards-container">
-          <!-- Populated dynamically with high-speed local WebP thumbnails -->
-        </div>
-      </section>
-
-      <!-- Section B: Astronomical Archive Search Results -->
-      <section id="section-nasa-results" class="cards-section" style="display: none;">
-        <div class="section-heading-row">
-          <div class="nasa-heading-group">
-            <h3 class="section-title" id="archive-results-title">🛸 NASA Deep Space Archive Results</h3>
-            <span class="nasa-live-badge" id="archive-results-badge">Live API</span>
+        <!-- Section B: Astronomical Archive Search Results (In 2 Columns) -->
+        <section id="section-nasa-results" class="cards-section" style="display: none;">
+          <div class="section-heading-row">
+            <div class="nasa-heading-group">
+              <h3 class="section-title" id="archive-results-title">🛸 NASA Deep Space Archive Results</h3>
+              <span class="nasa-live-badge" id="archive-results-badge">Live API</span>
+            </div>
+            <span class="section-count" id="nasa-results-count">Searching...</span>
           </div>
-          <span class="section-count" id="nasa-results-count">Searching...</span>
-        </div>
-        <div id="nasa-loading-spinner" class="nasa-spinner-box" style="display: none;">
-          <div class="cosmic-spinner"></div>
-          <span id="nasa-loading-text">Querying NASA Image and Video Library...</span>
-        </div>
-        <div class="celestial-grid" id="nasa-cards-container"></div>
+          <div id="nasa-loading-spinner" class="nasa-spinner-box" style="display: none;">
+            <div class="cosmic-spinner"></div>
+            <span id="nasa-loading-text">Querying NASA Image and Video Library...</span>
+          </div>
+          <div class="celestial-grid celestial-grid-2col" id="nasa-cards-container"></div>
+        </section>
       </section>
     </main>
   </div>
@@ -519,9 +541,9 @@
           </div>
         </div>
 
-        <!-- Tier 2: 3-Step Guided Workflow & Loop Controls (Directly Below Tier 1) -->
+        <!-- Tier 2: 3-Step Guided Workflow & Loop Controls (Integrated High-Legibility Flow) -->
         <div class="hud-card top-bar-tier tier-workflow">
-          <div class="tier-left">
+          <div class="tier-left tier-workflow-cluster">
             <span class="steps-label">STUDIO WORKFLOW:</span>
             <div class="studio-tabs">
               <button class="tab-btn step-tab" data-drawer="drawer-grade" title="Step 1: In-Browser AMOLED True-Black Color Grading">
@@ -534,21 +556,25 @@
                 <span class="step-badge">Step 3</span> 💾 Export Wallpaper
               </button>
             </div>
-          </div>
 
-          <div class="tier-right">
-            <div class="control-group">
-              <label for="select-preset">Device Ratio:</label>
-              <select id="select-preset"></select>
+            <div class="tier-separator"></div>
+
+            <!-- Highly Legible Target Device Ratio Capsule (Right Next to Step Buttons) -->
+            <div class="workflow-capsule" title="Target Screen Ratio: Crops & scales viewport geometry to fit your physical device without black bars">
+              <span class="capsule-icon">📐</span>
+              <label for="select-preset" class="capsule-label">DEVICE RATIO:</label>
+              <select id="select-preset" class="capsule-select"></select>
             </div>
 
-            <div class="control-group">
-              <label for="select-duration">Loop Length:</label>
-              <select id="select-duration">
-                <option value="30">30 Seconds</option>
-                <option value="60">60 Seconds (1 Min)</option>
-                <option value="120">120 Seconds (2 Min)</option>
-                <option value="180" selected>180 Seconds (3 Min Full Loop)</option>
+            <!-- Highly Legible Loop Cycle Length Capsule (Right Next to Step Buttons) -->
+            <div class="workflow-capsule" title="Loop Cycle Duration: Total seconds before the camera trajectory seamlessly loops back to start">
+              <span class="capsule-icon">⏱️</span>
+              <label for="select-duration" class="capsule-label">LOOP TIME:</label>
+              <select id="select-duration" class="capsule-select">
+                <option value="30">30s (Fast Cycle)</option>
+                <option value="60">60s (1 Min Standard)</option>
+                <option value="120">120s (2 Min Relaxed)</option>
+                <option value="180" selected>180s (3 Min Odyssey)</option>
               </select>
             </div>
           </div>
