@@ -37,21 +37,15 @@ assert(!indexHtml.includes('<select id="select-record-quality" style="flex: 1;">
   'index.html select-record-quality must not have unconstrained flex: 1 style attribute');
 console.log('✓ Drawer boundary, flex: 1 1 0, text-overflow: ellipsis, and scrollbar elimination verified.');
 
-// --- Test 2: HTML UI Elements for Visual Adjustments & Separate Buttons ---
-console.log('\n--- Test 2: Sliders & Separate Buttons in Step 1 Drawer ---');
+// --- Test 2: HTML UI Elements for Visual Adjustments & Dedicated Buttons ---
+console.log('\n--- Test 2: Visual Adjustment Sliders & Dedicated Buttons in Step 1 Drawer ---');
 const expectedSliders = [
-  'slider-black-floor',
-  'slider-knee-width',
-  'slider-star-protect',
   'slider-exposure',
   'slider-contrast',
   'slider-saturation',
   'slider-sharpness'
 ];
 const expectedValLabels = [
-  'val-black-floor',
-  'val-knee-width',
-  'val-star-protect',
   'val-exposure',
   'val-contrast',
   'val-saturation',
@@ -65,27 +59,27 @@ expectedValLabels.forEach(id => {
   assert(indexHtml.includes(`id="${id}"`), `index.html must contain value display #${id}`);
 });
 
-// Verify SEPARATE buttons for AMOLED Grading and Image Adjustments
-assert(indexHtml.includes('id="btn-apply-amoled"'), 'index.html must contain separate button #btn-apply-amoled');
-assert(indexHtml.includes('id="btn-reset-amoled"'), 'index.html must contain separate button #btn-reset-amoled');
-assert(indexHtml.includes('id="btn-apply-adjustments"'), 'index.html must contain separate button #btn-apply-adjustments');
-assert(indexHtml.includes('id="btn-reset-adjustments"'), 'index.html must contain separate button #btn-reset-adjustments');
-assert(indexHtml.includes('id="btn-undo-grade"'), 'index.html must contain master revert button #btn-undo-grade');
-console.log('✓ All 7 sliders, value displays, and SEPARATE Apply/Reset buttons verified in index.html.');
+// Verify 1-click AMOLED button, visual adjustment button, and single master revert button
+assert(indexHtml.includes('id="btn-apply-amoled"'), 'index.html must contain 1-click button #btn-apply-amoled');
+assert(indexHtml.includes('id="btn-apply-adjustments"'), 'index.html must contain button #btn-apply-adjustments');
+assert(indexHtml.includes('id="btn-undo-grade"'), 'index.html must contain single master revert button #btn-undo-grade');
 
-// --- Test 3: wallpaper.js Event Listener & Reset Integration ---
-console.log('\n--- Test 3: wallpaper.js Separate Button Handlers & Binding ---');
+// Verify obsolete 2 reset buttons are cleanly removed as requested
+assert(!indexHtml.includes('id="btn-reset-amoled"'), 'index.html must remove redundant #btn-reset-amoled button');
+assert(!indexHtml.includes('id="btn-reset-adjustments"'), 'index.html must remove redundant #btn-reset-adjustments button');
+console.log('✓ 4 visual adjustment sliders, 1-click AMOLED button, apply button, and single revert button verified in index.html.');
+
+// --- Test 3: wallpaper.js Event Listener, Slider Reset & Binding Integration ---
+console.log('\n--- Test 3: wallpaper.js Dedicated Button Handlers & Automatic Slider Reset ---');
 assert(wallpaperJs.includes("'exposure'"), 'wallpaper.js sliders array must contain exposure');
 assert(wallpaperJs.includes("'contrast'"), 'wallpaper.js sliders array must contain contrast');
 assert(wallpaperJs.includes("'saturation'"), 'wallpaper.js sliders array must contain saturation');
 assert(wallpaperJs.includes("'sharpness'"), 'wallpaper.js sliders array must contain sharpness');
 
 assert(wallpaperJs.includes('btnApplyAmoled'), 'wallpaper.js must bind btnApplyAmoled');
-assert(wallpaperJs.includes('btnResetAmoled'), 'wallpaper.js must bind btnResetAmoled');
 assert(wallpaperJs.includes('btnApplyAdjustments'), 'wallpaper.js must bind btnApplyAdjustments');
-assert(wallpaperJs.includes('btnResetAdjustments'), 'wallpaper.js must bind btnResetAdjustments');
-assert(wallpaperJs.includes('resetAmoledSection'), 'wallpaper.js must define resetAmoledSection');
-assert(wallpaperJs.includes('resetAdjustmentsSection'), 'wallpaper.js must define resetAdjustmentsSection');
+assert(wallpaperJs.includes('resetAdjustmentSliders'), 'wallpaper.js must define resetAdjustmentSliders');
+assert(wallpaperJs.includes('btnUndoGrade'), 'wallpaper.js must bind btnUndoGrade');
 
 assert(wallpaperJs.includes('exposure: exposure,'), 'wallpaper.js applyGrade options must pass exposure');
 assert(wallpaperJs.includes('contrast: contrast,'), 'wallpaper.js applyGrade options must pass contrast');
@@ -93,12 +87,12 @@ assert(wallpaperJs.includes('saturation: saturation,'), 'wallpaper.js applyGrade
 assert(wallpaperJs.includes('sharpness: sharpness,'), 'wallpaper.js applyGrade options must pass sharpness');
 
 assert(wallpaperJs.includes("'exposure': { val: 0, text: '+0.00 EV' }"),
-  'wallpaper.js resetAmoledGrade must reset exposure');
+  'wallpaper.js resetAdjustmentSliders must reset exposure to 0');
 assert(wallpaperJs.includes("'saturation': { val: 1.00, text: '1.00x' }"),
-  'wallpaper.js resetAmoledGrade must reset saturation');
+  'wallpaper.js resetAdjustmentSliders must reset saturation to 1.00');
 assert(wallpaperJs.includes("'sharpness': { val: 0, text: '0%' }"),
-  'wallpaper.js resetAmoledGrade must reset sharpness');
-console.log('✓ wallpaper.js separate button bindings, sectional resets, and full master revert verified.');
+  'wallpaper.js resetAdjustmentSliders must reset sharpness to 0');
+console.log('✓ wallpaper.js button bindings, automatic slider zero reset, and full master revert verified.');
 
 // --- Test 4: GradingEngine Pixel Processing Mathematics ---
 console.log('\n--- Test 4: GradingEngine Pixel Mathematics & Algorithms ---');

@@ -1107,11 +1107,16 @@
       updateSplineEditorView();
       runAutoGradeTelemetry();
       resetWorkflowToStep1(true);
+      resetAdjustmentSliders();
 
       // Calculate and display resolution & quality telemetry
       const specs = calculateImageQualitySpecs(rawSourceImage, 0, isCanvasTainted);
       activeImageSpecs = specs;
-      showImageSpecsToast(specs, title);
+      // Note: Telemetry popup removed on new image load as requested; specs are shown in top panel
+      if (toastSpecs) {
+        toastSpecs.classList.remove('visible', 'show');
+        toastSpecs.style.display = 'none';
+      }
       updateHudResolutionBadge(specs);
 
       const elVistaTitle = document.getElementById('hud-vista-title');
@@ -1609,13 +1614,16 @@
       return;
     }
 
-    const floor = parseFloat(document.getElementById('slider-black-floor').value);
-    const knee = parseFloat(document.getElementById('slider-knee-width').value);
-    const star = parseFloat(document.getElementById('slider-star-protect').value) / 100.0;
+    const floorEl = document.getElementById('slider-black-floor');
+    const floor = floorEl ? parseFloat(floorEl.value) : 22.0;
+    const kneeEl = document.getElementById('slider-knee-width');
+    const knee = kneeEl ? parseFloat(kneeEl.value) : 24.0;
+    const starEl = document.getElementById('slider-star-protect');
+    const star = starEl ? (parseFloat(starEl.value) / 100.0) : 0.85;
     const exposureEl = document.getElementById('slider-exposure');
     const exposure = exposureEl ? parseFloat(exposureEl.value) : 0.0;
     const contrastEl = document.getElementById('slider-contrast');
-    const contrast = contrastEl ? parseFloat(contrastEl.value) : 1.08;
+    const contrast = contrastEl ? parseFloat(contrastEl.value) : 1.00;
     const saturationEl = document.getElementById('slider-saturation');
     const saturation = saturationEl ? parseFloat(saturationEl.value) : 1.00;
     const sharpnessEl = document.getElementById('slider-sharpness');
@@ -1697,8 +1705,8 @@
         if (!isPreview) {
           if (triggerType === 'amoled') {
             if (btnAmoled) {
-              btnAmoled.textContent = '✓ AMOLED Grade Baked!';
-              setTimeout(() => { if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade'; }, 1500);
+              btnAmoled.textContent = '✓ AMOLED Applied!';
+              setTimeout(() => { if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED True-Black'; }, 1500);
             }
           } else if (triggerType === 'adjustments') {
             if (btnAdj) {
@@ -1708,7 +1716,7 @@
           } else {
             if (btnAmoled) {
               btnAmoled.textContent = '✓ Applied!';
-              setTimeout(() => { if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade'; }, 1500);
+              setTimeout(() => { if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED True-Black'; }, 1500);
             }
             if (btnAdj) {
               btnAdj.textContent = '✓ Applied!';
@@ -1720,12 +1728,30 @@
       } catch (err) {
         console.error('Grading failed:', err);
         if (!isPreview) {
-          if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade';
+          if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED True-Black';
           if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments';
           alert('Could not grade pixels: This external image does not allow direct pixel manipulation due to CORS. Please download the image and drag-and-drop it into the app.');
         }
       }
     }, isPreview ? 0 : 20);
+  }
+
+  /**
+   * Resets all visual adjustment sliders to zero / neutral defaults
+   */
+  function resetAdjustmentSliders() {
+    const resetVals = {
+      'exposure': { val: 0, text: '+0.00 EV' },
+      'contrast': { val: 1.00, text: '1.00x' },
+      'saturation': { val: 1.00, text: '1.00x' },
+      'sharpness': { val: 0, text: '0%' }
+    };
+    Object.entries(resetVals).forEach(([id, cfg]) => {
+      const slider = document.getElementById(`slider-${id}`);
+      const valLabel = document.getElementById(`val-${id}`);
+      if (slider) slider.value = cfg.val;
+      if (valLabel) valLabel.textContent = cfg.text;
+    });
   }
 
   /**
@@ -1755,18 +1781,7 @@
    * Resets only the visual enhancements (exposure, contrast, saturation, sharpness) to default
    */
   function resetAdjustmentsSection() {
-    const resetVals = {
-      'exposure': { val: 0, text: '+0.00 EV' },
-      'contrast': { val: 1.08, text: '1.08x' },
-      'saturation': { val: 1.00, text: '1.00x' },
-      'sharpness': { val: 0, text: '0%' }
-    };
-    Object.entries(resetVals).forEach(([id, cfg]) => {
-      const slider = document.getElementById(`slider-${id}`);
-      const valLabel = document.getElementById(`val-${id}`);
-      if (slider) slider.value = cfg.val;
-      if (valLabel) valLabel.textContent = cfg.text;
-    });
+    resetAdjustmentSliders();
     const btn = document.getElementById('btn-reset-adjustments');
     if (btn) {
       btn.textContent = '✓ Reset!';
@@ -1793,17 +1808,16 @@
     runAutoGradeTelemetry();
     renderFrame();
 
-    // Reset all 7 sliders & labels to default states
-    const resetVals = {
+    // Reset all adjustment sliders & labels to neutral default states
+    resetAdjustmentSliders();
+
+    // Also reset AMOLED sliders if present in DOM
+    const amoledVals = {
       'black-floor': { val: 22, text: '22' },
       'knee-width': { val: 24, text: '24' },
-      'star-protect': { val: 85, text: '85%' },
-      'exposure': { val: 0, text: '+0.00 EV' },
-      'contrast': { val: 1.08, text: '1.08x' },
-      'saturation': { val: 1.00, text: '1.00x' },
-      'sharpness': { val: 0, text: '0%' }
+      'star-protect': { val: 85, text: '85%' }
     };
-    Object.entries(resetVals).forEach(([id, cfg]) => {
+    Object.entries(amoledVals).forEach(([id, cfg]) => {
       const slider = document.getElementById(`slider-${id}`);
       const valLabel = document.getElementById(`val-${id}`);
       if (slider) slider.value = cfg.val;
@@ -2211,9 +2225,9 @@
         [pool[i], pool[j]] = [pool[j], pool[i]];
       }
 
-      // Populate 7 rows with 2 unique discoveries each (total 14 items displayed in 2 clean columns)
+      // Populate 11 rows with 2 unique discoveries each (total 22 items displayed in 2 clean columns - 1.5x scaling)
       const itemsPerRow = 2;
-      const numRows = 7;
+      const numRows = 11;
       const rows = [];
       for (let r = 0; r < numRows; r++) {
         rows.push(pool.slice(r * itemsPerRow, (r + 1) * itemsPerRow));

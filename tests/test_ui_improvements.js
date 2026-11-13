@@ -22,13 +22,15 @@ const wallpaperJs = fs.readFileSync(path.join(ROOT_DIR, 'src', 'wallpaper.js'), 
 const styleCss = fs.readFileSync(path.join(ROOT_DIR, 'src', 'style.css'), 'utf8');
 
 // ---------------------------------------------------------------------------
-// Test 1: Download Raw Master Button next to object details label in top pane
+// Test 1: Download Original Image Button next to object details in top pane
 // ---------------------------------------------------------------------------
-console.log('\n--- Test 1: Download Raw Master Image Button ---');
+console.log('\n--- Test 1: Download Original Image Button ---');
 assert(indexHtml.includes('id="btn-download-raw-master"'), 
   'index.html must contain #btn-download-raw-master button in top pane');
 assert(indexHtml.includes('class="btn-download-raw-master"'), 
   'index.html must style raw download button with .btn-download-raw-master');
+assert(indexHtml.includes('Download Original Image') || indexHtml.includes('Download Original'),
+  'index.html download button must have intuitive name "Download Original Image"');
 
 // Verify it is placed in .tier-right right next to #hud-res-badge
 const tierRightIdx = indexHtml.indexOf('class="tier-right"');
@@ -44,33 +46,37 @@ assert(wallpaperJs.includes('btnDownloadRawMaster'),
   'wallpaper.js must bind #btn-download-raw-master');
 assert(styleCss.includes('.btn-download-raw-master'), 
   'style.css must style .btn-download-raw-master');
-console.log('✓ Download Raw Master button verified next to object details in top pane.');
+console.log('✓ Download Original Image button verified next to object details in top pane.');
 
 // ---------------------------------------------------------------------------
-// Test 2: Step 1 Drawer No-Scroll 2-Column Dashboard Layout
+// Test 2: Step 1 Drawer Single-Column Studio Layout
 // ---------------------------------------------------------------------------
-console.log('\n--- Test 2: Step 1 Drawer No-Scroll 2-Column Dashboard Layout ---');
-assert(indexHtml.includes('class="studio-drawer drawer-grade-wide" id="drawer-grade"'),
-  'index.html #drawer-grade must declare .drawer-grade-wide');
+console.log('\n--- Test 2: Step 1 Drawer Single-Column Studio Layout ---');
+assert(indexHtml.includes('class="studio-drawer" id="drawer-grade"'),
+  'index.html #drawer-grade must declare clean single-column .studio-drawer without drawer-grade-wide');
 assert(indexHtml.includes('class="telemetry-card telemetry-card-compact"'),
   'index.html #drawer-grade must use compact 1-line telemetry card');
-assert(indexHtml.includes('class="grade-columns-grid"'),
-  'index.html #drawer-grade must contain .grade-columns-grid for 2-column layout');
-assert(indexHtml.includes('class="grade-column"'),
-  'index.html #drawer-grade must contain .grade-column elements for Left & Right groups');
+assert(indexHtml.includes('class="grade-section"'),
+  'index.html #drawer-grade must contain .grade-section elements for clean vertical sections');
+assert(indexHtml.includes('id="btn-apply-amoled"'),
+  'index.html #drawer-grade must contain 1-click #btn-apply-amoled button');
+assert(indexHtml.includes('id="btn-apply-adjustments"'),
+  'index.html #drawer-grade must contain 1-click #btn-apply-adjustments button');
+assert(indexHtml.includes('id="btn-undo-grade"'),
+  'index.html #drawer-grade must contain single master revert button');
 
-assert(styleCss.includes('.studio-drawer.drawer-grade-wide'),
-  'style.css must define wide drawer rules for #drawer-grade');
-assert(styleCss.includes('.grade-columns-grid'),
-  'style.css must define 2-column grid layout for Step 1 controls');
-assert(styleCss.includes('.telemetry-card.telemetry-card-compact'),
-  'style.css must define compact horizontal telemetry strip');
-console.log('✓ Step 1 2-Column Dashboard & no-scroll architecture verified.');
+assert(styleCss.includes('.grade-section {'),
+  'style.css must define .grade-section container');
+assert(styleCss.includes('.grade-section-heading'),
+  'style.css must define .grade-section-heading');
+console.log('✓ Step 1 Single-Column Studio layout verified.');
 
 // ---------------------------------------------------------------------------
-// Test 3: Popular Discoveries 2-Column Matrix (Zero Cutoff on Right)
+// Test 3: Popular Discoveries 2-Column Matrix (1.5x Scaling: 22 Items)
 // ---------------------------------------------------------------------------
 console.log('\n--- Test 3: Popular Discoveries 2-Column Matrix ---');
+assert(wallpaperJs.includes('numRows = 11'),
+  'wallpaper.js must configure numRows = 11 (22 items total) for 1.5x scaling on 1080p');
 assert(wallpaperJs.includes("'topic-name'") || wallpaperJs.includes('"topic-name"'), 
   'wallpaper.js must render .topic-name for each discovery');
 assert(wallpaperJs.includes("'topic-cat'") || wallpaperJs.includes('"topic-cat"'), 
@@ -83,7 +89,7 @@ assert(styleCss.includes('.topic-name'),
   'style.css must define .topic-name with text-overflow: ellipsis');
 assert(styleCss.includes('.topic-cat'), 
   'style.css must define .topic-cat badge');
-console.log('✓ Popular discoveries 2-column matrix verified to prevent cutoff and fill empty space.');
+console.log('✓ Popular discoveries 2-column matrix verified to prevent cutoff and fill empty space with 1.5x items.');
 
 // ---------------------------------------------------------------------------
 // Test 4: Search Archive Selector Uncramped Styling
