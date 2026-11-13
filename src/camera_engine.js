@@ -38,28 +38,31 @@ class CameraEngine {
 
   /**
    * Initializes waypoints in normalized image coordinates [0.0 - 1.0].
-   * Baseline zoom z >= 1.25 gives ample room to pan across all mobile/desktop aspect ratios.
+   * Anchored with a majestic Center Wide Overview at z = 1.00 so user gets the Big Picture once per loop!
    */
   initPaths() {
     // 1. Cosmic Odyssey: Smooth, continuous panoramic tour without hairpin reversals (~85-90% coverage)
+    // Anchored with a majestic Center Wide Overview at z = 1.00 so user gets the Big Picture once per loop!
     this.odysseyWaypoints = [
-      { x: 0.30, y: 0.28, z: 1.35, desc: 'Top-Left Celestial Void' },
-      { x: 0.50, y: 0.30, z: 1.50, desc: 'Upper Central Ridge' },
-      { x: 0.70, y: 0.38, z: 1.90, desc: 'North-East Gas Wall' },
-      { x: 0.76, y: 0.56, z: 2.40, desc: 'East Ionization Front' },
-      { x: 0.56, y: 0.64, z: 3.20, desc: 'Protostar Nursery Macro' },
-      { x: 0.40, y: 0.72, z: 2.10, desc: 'Southern Nebular Shelf' },
-      { x: 0.25, y: 0.62, z: 1.75, desc: 'South-West Luminous Gas' },
-      { x: 0.22, y: 0.44, z: 1.45, desc: 'Western Perimeter' }
+      { x: 0.50, y: 0.50, z: 1.00, desc: 'Grand Celestial Overview (The Big Picture)' },
+      { x: 0.32, y: 0.30, z: 1.65, desc: 'North-West Gas Filaments' },
+      { x: 0.50, y: 0.32, z: 2.10, desc: 'Northern Ionization Ridge' },
+      { x: 0.68, y: 0.36, z: 2.60, desc: 'North-East Stellar Nursery' },
+      { x: 0.74, y: 0.55, z: 3.40, desc: 'East Protostar Jet Climax' },
+      { x: 0.58, y: 0.68, z: 2.50, desc: 'Southern Dust Pillars' },
+      { x: 0.33, y: 0.66, z: 1.85, desc: 'South-West Luminous Shelf' },
+      { x: 0.24, y: 0.48, z: 1.40, desc: 'Western Perimeter Drift' }
     ];
 
     // 2. Deep Dive: Extreme macro details and slow contemplative glides
+    // Starts with Full Observatory Overview, plunges into high-density cores, and returns seamlessly
     this.deepDiveWaypoints = [
-      { x: 0.50, y: 0.55, z: 2.00, desc: 'Core Vista' },
-      { x: 0.46, y: 0.58, z: 3.60, desc: 'Protostar Jet Macro' },
-      { x: 0.54, y: 0.62, z: 4.40, desc: 'Pillar Crest Inspection' },
-      { x: 0.60, y: 0.56, z: 3.20, desc: 'Glowing Gas Horizon' },
-      { x: 0.52, y: 0.48, z: 2.50, desc: 'Dust Filament Drift' }
+      { x: 0.50, y: 0.50, z: 1.00, desc: 'Full Observatory Overview (Big Picture)' },
+      { x: 0.48, y: 0.46, z: 2.00, desc: 'Core Cloud Horizon' },
+      { x: 0.54, y: 0.52, z: 3.60, desc: 'Protostar Jet Macro' },
+      { x: 0.50, y: 0.58, z: 4.40, desc: 'Pillar Crest Extreme Macro Climax' },
+      { x: 0.42, y: 0.54, z: 2.80, desc: 'Glowing Gas Horizon' },
+      { x: 0.45, y: 0.48, z: 1.70, desc: 'Dust Filament Pull-Back' }
     ];
 
     // 3. Custom / User-Edited Waypoints
@@ -109,7 +112,7 @@ class CameraEngine {
     const pt = {
       x: Math.max(0.05, Math.min(0.95, ptObj.x !== undefined ? ptObj.x : 0.5)),
       y: Math.max(0.05, Math.min(0.95, ptObj.y !== undefined ? ptObj.y : 0.5)),
-      z: Math.max(1.10, Math.min(5.0, ptObj.z !== undefined ? ptObj.z : 2.0)),
+      z: Math.max(1.00, Math.min(5.0, ptObj.z !== undefined ? ptObj.z : 2.0)),
       desc: ptObj.desc || `Waypoint ${this.customWaypoints.length + 1}`
     };
     this.customWaypoints.splice(idx, 0, pt);
@@ -130,29 +133,87 @@ class CameraEngine {
   }
 
   /**
-   * Procedural Randomization of Spline Waypoints:
-   * Generates a smooth, loop-closed trajectory distributed across quadrants with organic zoom pacing.
+   * Procedural Cinematic Narrative Spline Generator:
+   * Generates a 4-phase cinematic visual arc:
+   * 1. Act I (Establishing): Center wide overview at z = 1.00 (The Big Picture).
+   * 2. Act II (Approach & Medium Shot): Glide to a Rule-of-Thirds node at medium zoom (z ~ 1.7 - 2.1).
+   * 3. Act III (Macro Climax): Deep dive into dense detail at deep zoom (z ~ 3.2 - 4.2).
+   * 4. Act IV (Counter-Glide & Easing Return): Sweeping lateral pan easing back to the wide overview.
+   * Includes Aspect-Ratio-Aware Directional Biasing (lateral for ultrawide, pedestal for portrait).
    */
-  randomizeWaypoints(count = 7) {
+  randomizeWaypoints(count = 7, aspectHint = null) {
     const pts = [];
-    const cx = 0.50, cy = 0.50;
-    const rx = 0.28 + Math.random() * 0.08;
-    const ry = 0.24 + Math.random() * 0.06;
+    const n = Math.max(5, count);
 
-    for (let i = 0; i < count; i++) {
-      const baseAngle = (i / count) * 2 * Math.PI;
-      const angle = baseAngle + (Math.random() - 0.5) * 0.45;
-      const distMod = 0.70 + Math.random() * 0.55;
+    // 1. Aspect-Ratio-Aware Directional Biasing
+    const aspect = aspectHint || (this.imgH > 0 ? (this.imgW / this.imgH) : 1.78);
+    let rx, ry;
+    if (aspect >= 1.5) {
+      // Widescreen / Ultrawide: sweeping lateral tracking moves (classic 70mm cinema)
+      rx = 0.32 + Math.random() * 0.06;
+      ry = 0.18 + Math.random() * 0.05;
+    } else if (aspect <= 0.75) {
+      // Mobile / Portrait: majestic vertical ascension & pedestal movement
+      rx = 0.18 + Math.random() * 0.05;
+      ry = 0.32 + Math.random() * 0.06;
+    } else {
+      // Balanced orbital tour for standard displays
+      rx = 0.27 + Math.random() * 0.05;
+      ry = 0.24 + Math.random() * 0.05;
+    }
 
-      const x = Math.max(0.18, Math.min(0.82, cx + Math.cos(angle) * rx * distMod));
-      const y = Math.max(0.20, Math.min(0.80, cy + Math.sin(angle) * ry * distMod));
-      const z = 1.30 + Math.random() * 2.30;
+    // 2. Act I: The Grand Overview (Center Big Picture)
+    // Anchored at index 0 (the seamless loop seam) with z = 1.00
+    pts.push({
+      x: parseFloat((0.50 + (Math.random() - 0.5) * 0.02).toFixed(3)),
+      y: parseFloat((0.50 + (Math.random() - 0.5) * 0.02).toFixed(3)),
+      z: 1.00,
+      desc: 'Grand Overview (The Big Picture)'
+    });
+
+    // Determine the index for the Deep Macro Climax (around halfway through the loop)
+    const climaxIdx = Math.floor(n / 2);
+
+    for (let i = 1; i < n; i++) {
+      const angle = (i / n) * 2 * Math.PI + (Math.random() - 0.5) * 0.35;
+      const distMod = 0.85 + Math.random() * 0.30;
+
+      let x = 0.50 + Math.cos(angle) * rx * distMod;
+      let y = 0.50 + Math.sin(angle) * ry * distMod;
+
+      // Soft Rule-of-Thirds gravity (guide toward 0.33 or 0.67 coordinates)
+      const targetThirdX = x < 0.5 ? 0.33 : 0.67;
+      const targetThirdY = y < 0.5 ? 0.33 : 0.67;
+      x = x * 0.70 + targetThirdX * 0.30;
+      y = y * 0.70 + targetThirdY * 0.30;
+
+      x = Math.max(0.18, Math.min(0.82, x));
+      y = Math.max(0.20, Math.min(0.80, y));
+
+      let z, desc;
+      if (i === climaxIdx) {
+        // Act III: Deep Macro Climax
+        z = 3.20 + Math.random() * 1.10; // 3.20 - 4.30
+        desc = `Macro Climax (Detail Inspection)`;
+      } else if (i === 1 || i === n - 1) {
+        // Transitional Waypoints (Easing to/from Grand Overview)
+        z = 1.45 + Math.random() * 0.35; // 1.45 - 1.80
+        desc = i === 1 ? 'Discovery Approach Glide' : 'Scenic Return Arc';
+      } else if (i < climaxIdx) {
+        // Act II: Building Tension & Guided Tour
+        z = 2.00 + Math.random() * 0.70; // 2.00 - 2.70
+        desc = `Guided Exploration ${i}`;
+      } else {
+        // Act IV: Resolving Counter-Glide
+        z = 2.10 + Math.random() * 0.60; // 2.10 - 2.70
+        desc = `Counter-Glide Transition ${i}`;
+      }
 
       pts.push({
         x: parseFloat(x.toFixed(3)),
         y: parseFloat(y.toFixed(3)),
         z: parseFloat(z.toFixed(2)),
-        desc: `Waystop ${i + 1}`
+        desc
       });
     }
 
@@ -163,40 +224,55 @@ class CameraEngine {
   }
 
   /**
-   * Catmull-Rom closed spline evaluation with wrapping indices.
+   * Centripetal Catmull-Rom closed spline evaluation with wrapping indices.
+   * Eliminates cusps, self-intersections, and whiplash cornering.
    */
   catmullRom(p0, p1, p2, p3, t) {
-    const t2 = t * t;
-    const t3 = t2 * t;
+    const l0 = Math.log2(p0.z);
+    const l1 = Math.log2(p1.z);
+    const l2 = Math.log2(p2.z);
+    const l3 = Math.log2(p3.z);
 
-    const x = 0.5 * (
-      (2 * p1.x) +
-      (-p0.x + p2.x) * t +
-      (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
-      (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
-    );
+    const getKnot = (ti, x0, y0, z0, x1, y1, z1) => {
+      const dx = x1 - x0;
+      const dy = y1 - y0;
+      const dz = (z1 - z0) * 0.25;
+      const d = Math.hypot(dx, dy, dz);
+      return ti + Math.sqrt(Math.max(d, 1e-4));
+    };
 
-    const y = 0.5 * (
-      (2 * p1.y) +
-      (-p0.y + p2.y) * t +
-      (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
-      (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
-    );
+    const t0 = 0.0;
+    const t1 = getKnot(t0, p0.x, p0.y, l0, p1.x, p1.y, l1);
+    const t2 = getKnot(t1, p1.x, p1.y, l1, p2.x, p2.y, l2);
+    const t3 = getKnot(t2, p2.x, p2.y, l2, p3.x, p3.y, l3);
 
-    // Interpolate zoom in log2 scale for optical zoom pacing
-    const logZ0 = Math.log2(p0.z);
-    const logZ1 = Math.log2(p1.z);
-    const logZ2 = Math.log2(p2.z);
-    const logZ3 = Math.log2(p3.z);
+    const curT = t1 + t * (t2 - t1);
 
-    const logZ = 0.5 * (
-      (2 * logZ1) +
-      (-logZ0 + logZ2) * t +
-      (2 * logZ0 - 5 * logZ1 + 4 * logZ2 - logZ3) * t2 +
-      (-logZ0 + 3 * logZ1 - 3 * logZ2 + logZ3) * t3
-    );
+    const lerpPt = (x0, y0, z0, x1, y1, z1, tA, tB) => {
+      const dt = tB - tA;
+      if (Math.abs(dt) < 1e-6) return { x: x0, y: y0, z: z0 };
+      const f = (curT - tA) / dt;
+      return {
+        x: x0 + f * (x1 - x0),
+        y: y0 + f * (y1 - y0),
+        z: z0 + f * (z1 - z0)
+      };
+    };
 
-    return { x, y, z: Math.pow(2, logZ) };
+    const a1 = lerpPt(p0.x, p0.y, l0, p1.x, p1.y, l1, t0, t1);
+    const a2 = lerpPt(p1.x, p1.y, l1, p2.x, p2.y, l2, t1, t2);
+    const a3 = lerpPt(p2.x, p2.y, l2, p3.x, p3.y, l3, t2, t3);
+
+    const b1 = lerpPt(a1.x, a1.y, a1.z, a2.x, a2.y, a2.z, t0, t2);
+    const b2 = lerpPt(a2.x, a2.y, a2.z, a3.x, a3.y, a3.z, t1, t3);
+
+    const c = lerpPt(b1.x, b1.y, b1.z, b2.x, b2.y, b2.z, t1, t2);
+
+    return {
+      x: c.x,
+      y: c.y,
+      z: Math.max(1.00, Math.pow(2, c.z))
+    };
   }
 
   /**
@@ -243,7 +319,10 @@ class CameraEngine {
   }
 
   /**
-   * Builds an Arc-Length Lookup Table (LUT) for uniform screen-space camera velocity.
+   * Builds an Arc-Length Lookup Table (LUT) with Cinematic Dwell Weighting.
+   * Arc-length re-parameterization ensures uniform screen-space velocity,
+   * while cubic Hermite dwell weighting creates gentle, cinematic deceleration
+   * when lingering at the Grand Wide Overview (z <= 1.15) and Deep Macro Climax (z >= 2.80).
    */
   buildLUT() {
     this.lut = [];
@@ -258,8 +337,22 @@ class CameraEngine {
       const pt = this.evalRaw(u);
       const dx = (pt.x - prev.x) * this.imgW;
       const dy = (pt.y - prev.y) * this.imgH;
-      const dist = Math.hypot(dx, dy);
-      totalLen += dist;
+      const dz = Math.abs(Math.log2(pt.z) - Math.log2(prev.z)) * Math.min(this.imgW, this.imgH) * 0.40;
+      const dist = Math.hypot(dx, dy, dz);
+
+      // Principle 4: Cinematic Dwell (Hermite Linger)
+      // Smoothly linger at wide overview (z <= 1.15) and macro climax (z >= 2.80)
+      let dwell = 1.0;
+      if (pt.z <= 1.15) {
+        const t = Math.max(0, (1.15 - pt.z) / 0.15);
+        dwell += 0.35 * (3 * t * t - 2 * t * t * t);
+      } else if (pt.z >= 2.80) {
+        const t = Math.min(1.0, (pt.z - 2.80) / 1.20);
+        dwell += 0.30 * (3 * t * t - 2 * t * t * t);
+      }
+
+      const weightedDist = Math.max(0.01, dist) * dwell;
+      totalLen += weightedDist;
       this.lut.push({ u, s: totalLen, pt });
       prev = pt;
     }

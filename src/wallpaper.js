@@ -1629,7 +1629,14 @@
     const btnRandomize = document.getElementById('btn-randomize-spline');
     if (btnRandomize) {
       btnRandomize.addEventListener('click', () => {
-        cameraEngine.randomizeWaypoints();
+        const preset = PRESETS[currentPresetKey] || PRESETS['fullscreen'];
+        let aspectHint = null;
+        if (!preset.isNative && preset.w > 0 && preset.h > 0) {
+          aspectHint = preset.w / preset.h;
+        } else if (rawSourceImage && rawSourceImage.naturalWidth && rawSourceImage.naturalHeight) {
+          aspectHint = rawSourceImage.naturalWidth / rawSourceImage.naturalHeight;
+        }
+        cameraEngine.randomizeWaypoints(7, aspectHint);
         selectedWpIndex = 0;
         updateSplineEditorView();
       });
