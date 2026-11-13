@@ -131,12 +131,20 @@ class GradingEngine {
     // 2. Precompute 256-entry lookup table for Exposure & Contrast tone curve
     // EV exposure: intensity multiplier = 2^exposure
     const expMultiplier = Math.pow(2.0, exposure);
-    const invContrast = contrast > 0 ? (1.0 / contrast) : 1.0;
     const lutTone = new Float32Array(256);
     for (let i = 0; i < 256; i++) {
       let v = i * expMultiplier;
-      if (contrast !== 1.0 && v > 0) {
-        v = Math.pow(Math.min(255.0, v) / 255.0, invContrast) * 255.0;
+      if (contrast !== 1.0) {
+        // Photographic S-curve contrast centered at midpoint (0.5 / 128)
+        // Taking slider to the right (>1.0) deepens shadows and boosts highlights (increases contrast)
+        // Taking slider to the left (<1.0) pulls shadows and highlights toward mid-gray (decreases contrast)
+        let norm = Math.min(1.0, Math.max(0.0, v / 255.0));
+        if (norm <= 0.5) {
+          norm = 0.5 * Math.pow(2.0 * norm, contrast);
+        } else {
+          norm = 1.0 - 0.5 * Math.pow(2.0 * (1.0 - norm), contrast);
+        }
+        v = norm * 255.0;
       }
       lutTone[i] = Math.min(255.0, Math.max(0.0, v));
     }

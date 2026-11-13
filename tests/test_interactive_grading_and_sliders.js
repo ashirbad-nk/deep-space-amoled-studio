@@ -160,6 +160,55 @@ assert(wallpaperSrc.includes('resetAmoledSection()'), 'resetAmoledSection must e
 assert(wallpaperSrc.includes('resetAdjustmentsSection()'), 'resetAdjustmentsSection must exist');
 console.log('✓ Master revert and Section 1 & 2 reset functions verified.');
 
+// 5. Verify Contrast Directionality (Photographic S-curve)
+console.log('\n--- Test 5: Contrast Directionality (Slider to Right Increases Contrast) ---');
+const contrastTestSrc = new MockCanvas(2, 1);
+// Pixel 0: Shadow [64, 64, 64, 255]
+// Pixel 1: Highlight [192, 192, 192, 255]
+contrastTestSrc.data[0] = 64;  contrastTestSrc.data[1] = 64;  contrastTestSrc.data[2] = 64;  contrastTestSrc.data[3] = 255;
+contrastTestSrc.data[4] = 192; contrastTestSrc.data[5] = 192; contrastTestSrc.data[6] = 192; contrastTestSrc.data[7] = 255;
+
+// High contrast test (slider moved to the right: contrast = 1.50)
+const highContrastOut = new MockCanvas(2, 1);
+gradingEngine.applyGrade(contrastTestSrc, highContrastOut, {
+  blackFloor: 0,
+  kneeWidth: 0,
+  starProtect: 0,
+  exposure: 0.0,
+  contrast: 1.50,
+  saturation: 1.0,
+  sharpness: 0.0
+});
+
+const hcShadow = highContrastOut.data[0];
+const hcHighlight = highContrastOut.data[4];
+
+// Low contrast test (slider moved to the left: contrast = 0.60)
+const lowContrastOut = new MockCanvas(2, 1);
+gradingEngine.applyGrade(contrastTestSrc, lowContrastOut, {
+  blackFloor: 0,
+  kneeWidth: 0,
+  starProtect: 0,
+  exposure: 0.0,
+  contrast: 0.60,
+  saturation: 1.0,
+  sharpness: 0.0
+});
+
+const lcShadow = lowContrastOut.data[0];
+const lcHighlight = lowContrastOut.data[4];
+
+// Taking slider to right (1.50) must make shadows DARKER than 64 and highlights BRIGHTER than 192
+assert(hcShadow < 64, `High contrast shadow must be darker than 64, got ${hcShadow}`);
+assert(hcHighlight > 192, `High contrast highlight must be brighter than 192, got ${hcHighlight}`);
+
+// Taking slider to left (0.60) must pull shadows UP toward gray (>64) and highlights DOWN toward gray (<192)
+assert(lcShadow > 64, `Low contrast shadow must be lighter than 64, got ${lcShadow}`);
+assert(lcHighlight < 192, `Low contrast highlight must be softer than 192, got ${lcHighlight}`);
+
+console.log(`✓ High contrast (1.50x): Shadow darkened from 64 -> ${hcShadow}, Highlight boosted from 192 -> ${hcHighlight}. (Dynamic range expanded by ${hcHighlight - hcShadow} levels vs 128 original)`);
+console.log(`✓ Low contrast (0.60x): Shadow lifted from 64 -> ${lcShadow}, Highlight softened from 192 -> ${lcHighlight}. (Dynamic range compressed to ${lcHighlight - lcShadow} levels vs 128 original)`);
+
 console.log('\n===============================================================');
 console.log('ALL INTERACTIVE GRADING & SLIDER TESTS PASSED (100%)');
 console.log('===============================================================');
