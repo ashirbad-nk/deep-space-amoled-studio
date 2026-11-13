@@ -1666,9 +1666,9 @@
     setTimeout(async () => {
       try {
         const selResEl = document.getElementById('select-export-html-res');
-        const resMode = selResEl ? selResEl.value : '5k';
-        // Fast 2560px preview during live slider dragging, full resolution ceiling on bake
-        const maxDim = isPreview ? 2560 : ((resMode === '8k') ? 8192 : ((resMode === '4k') ? 3840 : ((resMode === '1080p') ? 1920 : 5120)));
+        const resMode = selResEl ? selResEl.value : 'original';
+        // Fast 2560px preview during live slider dragging, full 8K ceiling on bake for Full Master / 8K
+        const maxDim = isPreview ? 2560 : ((resMode === '8k' || resMode === 'original') ? 8192 : ((resMode === '4k') ? 3840 : ((resMode === '1080p') ? 1920 : 5120)));
 
         const stats = gradingEngine.applyGrade(rawSourceImage, bakedGradedCanvas, {
           blackFloor: floor,
@@ -3597,12 +3597,11 @@
             // Case 2: Untainted canvas (including blob URLs created from streaming download)
             // Asynchronously extract high-performance WebP via canvas.toBlob()
             // Never pass blob: URLs to standalone HTML (they expire/break when opened outside the session)!
-            let maxAllowedW = 5120; // 5K Ultra (17.5 MP) ceiling: ultra-crisp, instant ~350ms encode, no PC freeze
-            if (resMode === '8k') maxAllowedW = 8192;
+            let maxAllowedW = 8192; // 8K Ultra (33.2 MP) safe ceiling: ultra-crisp, GPU-compliant, no PC freeze
+            if (resMode === '8k' || resMode === 'original') maxAllowedW = (origW > 8192 ? 8192 : origW);
             else if (resMode === '5k') maxAllowedW = 5120;
             else if (resMode === '4k') maxAllowedW = 3840;
             else if (resMode === '1080p') maxAllowedW = 1920;
-            else if (resMode === 'original') maxAllowedW = (origW > 5120 ? 5120 : origW); // Cap gigapixel (13.5K) masters at 5K
 
             const tw = Math.min(origW, maxAllowedW);
             const th = Math.round(origH * (tw / origW));
