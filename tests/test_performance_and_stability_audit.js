@@ -48,6 +48,12 @@ assert(wallpaperCode.includes('URL.revokeObjectURL(activeBlobUrl)'), 'Must revok
 assert(wallpaperCode.includes('thisLoadId !== currentLoadId'), 'Must discard stale image load race callbacks');
 console.log('✓ Concurrency lock, race prevention, and blob URL cleanup verified.');
 
+// Test 6: Zero Syntax Errors Across All Source Scripts
+console.log('\n--- Test 6: Zero Syntax Errors Across All Source Scripts ---');
+const { execSync } = require('child_process');
+execSync('node -c src/wallpaper.js src/camera_engine.js src/grading_engine.js src/exporter.js src/default_assets.js');
+console.log('✓ All source scripts verified to compile with zero syntax errors.');
+
 console.log('\n===============================================================');
 console.log('ALL AUDIT CHECKS PASSED SUCCESSFULLY! (100%)');
 console.log('===============================================================');

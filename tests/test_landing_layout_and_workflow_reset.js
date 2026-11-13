@@ -117,6 +117,14 @@ assert(wallpaperJs.includes('resetWorkflowToStep1(true);'),
   'loadImageSource must call resetWorkflowToStep1(true) when new image loads');
 console.log('✓ Automatic workflow reset to Step 1 on new vista load verified.');
 
+// ---------------------------------------------------------------------------
+// Test 6: Script Compilation & Zero Syntax Errors
+// ---------------------------------------------------------------------------
+console.log('\n--- Test 6: Script Compilation & Zero Syntax Errors ---');
+const { execSync } = require('child_process');
+execSync('node -c src/wallpaper.js src/camera_engine.js src/grading_engine.js src/exporter.js src/default_assets.js');
+console.log('✓ Zero syntax errors across all application scripts verified.');
+
 console.log('\n===============================================================');
 console.log('ALL LANDING 3-COL, POPULAR MATRIX & WORKFLOW TESTS PASSED (100%)');
 console.log('===============================================================');

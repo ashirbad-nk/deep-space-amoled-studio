@@ -1703,7 +1703,8 @@
     }
     isGradingActive = true;
 
-    const btnBake = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
+    const btnAmoled = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
+    const btnBake = btnAmoled;
     const btnAdj = document.getElementById('btn-apply-adjustments');
 
     if (isCanvasTainted) {
@@ -1764,9 +1765,6 @@
     const saturation = saturationEl ? parseFloat(saturationEl.value) : 1.00;
     const sharpnessEl = document.getElementById('slider-sharpness');
     const sharpness = sharpnessEl ? (parseFloat(sharpnessEl.value) / 100.0) : 0.0;
-
-    const btnAmoled = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
-    const btnAdj = document.getElementById('btn-apply-adjustments');
 
     if (!isPreview) {
       if (triggerType === 'amoled') {
