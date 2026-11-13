@@ -47,8 +47,8 @@ const popMatch = wallpaperJs.match(/const POPULAR_DISCOVERIES = (\[[\s\S]*?\]);/
 assert(popMatch, 'wallpaper.js must define POPULAR_DISCOVERIES array');
 const popularDiscoveries = eval(popMatch[1]);
 
-assert(popularDiscoveries.length >= 50, 
-  `POPULAR_DISCOVERIES must contain an extensive list (>= 50), got ${popularDiscoveries.length}`);
+assert(popularDiscoveries.length >= 200, 
+  `POPULAR_DISCOVERIES must contain an extensive list (>= 200), got ${popularDiscoveries.length}`);
 console.log(`✓ POPULAR_DISCOVERIES contains ${popularDiscoveries.length} sanitized celestial discoveries.`);
 
 // Verify sanitation of titles (clean, emoji icons, no raw underscores or ugly filenames) and coordinates/aliases
@@ -62,11 +62,11 @@ for (const item of popularDiscoveries) {
   assert(!item.name.toLowerCase().endsWith('.jpg'), `Item name "${item.name}" must not have .jpg extension`);
   assert(!item.name.toLowerCase().endsWith('.png'), `Item name "${item.name}" must not have .png extension`);
 }
-console.log('✓ All 60+ discovery titles, RA/Dec coordinates and alias arrays verified.');
+console.log(`✓ All ${popularDiscoveries.length} discovery titles, RA/Dec coordinates and alias arrays verified.`);
 
 assert(wallpaperJs.includes('function findPopularDiscovery('), 
   'wallpaper.js must define findPopularDiscovery helper function');
-console.log('✓ All 60+ discovery titles verified as cleanly sanitized for display.');
+console.log(`✓ All ${popularDiscoveries.length} discovery titles verified as cleanly sanitized for display.`);
 
 // Verify 3 rows rendering logic in wallpaper.js and index.html
 assert(wallpaperJs.includes('function renderPopularDiscoveries()'), 

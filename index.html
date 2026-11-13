@@ -105,19 +105,21 @@
               <option value="nasa">🚀 NASA Archives (Hubble, JWST, JPL)</option>
               <option value="wikimedia">🌌 Wikimedia Astrophotography (Public Domain)</option>
             </select>
-            <div class="search-input-wrapper">
-              <span class="search-icon">🔍</span>
-              <input 
-                type="text" 
-                id="global-cosmic-search" 
-                placeholder="Target name or coordinates (e.g. Orion, M31, 83.82, -5.39)..."
-                autocomplete="off"
-              >
-              <button id="btn-clear-search" class="btn-clear" style="display: none;">&times;</button>
+            <div class="search-input-row">
+              <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input 
+                  type="text" 
+                  id="global-cosmic-search" 
+                  placeholder="Target name or coordinates..."
+                  autocomplete="off"
+                >
+                <button id="btn-clear-search" class="btn-clear" style="display: none;">&times;</button>
+              </div>
+              <button id="btn-search-nasa-action" class="btn-nasa-search" title="Search public archives in real-time">
+                🚀 Search
+              </button>
             </div>
-            <button id="btn-search-nasa-action" class="btn-nasa-search" title="Search public archives in real-time">
-              🚀 Search
-            </button>
           </div>
         </div>
 
@@ -226,14 +228,15 @@
 
     <!-- ==================== STUDIO DRAWER PANELS ==================== -->
 
-    <!-- Drawer 1: AMOLED Color Grading & Visual Tuning -->
-    <div class="studio-drawer" id="drawer-grade">
+    <!-- Drawer 1: AMOLED Color Grading & Visual Tuning (No-Scroll 2-Column Dashboard) -->
+    <div class="studio-drawer drawer-grade-wide" id="drawer-grade">
       <div class="drawer-header">
         <div class="drawer-title">🖤 Step 1: Color Grading & AMOLED Tuning</div>
         <button class="btn-close">&times;</button>
       </div>
-      <div class="drawer-body">
-        <div class="telemetry-card">
+      <div class="drawer-body drawer-body-compact">
+        <!-- Compact 1-Line Telemetry Strip -->
+        <div class="telemetry-card telemetry-card-compact">
           <div class="telemetry-row">
             <span>Raw Image True-Black:</span>
             <span id="stat-raw-black" style="color: #ff6b6b; font-family: monospace;">0.00%</span>
@@ -248,94 +251,101 @@
           </div>
         </div>
 
-        <!-- Group A: AMOLED True-Black Controls -->
-        <div style="font-size: 11px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">
-          🌌 AMOLED True-Black Controls
-        </div>
+        <!-- 2-Column Dashboard Grid: AMOLED Controls (Left) vs Visual Enhancements (Right) -->
+        <div class="grade-columns-grid">
+          <!-- Column A: AMOLED True-Black Controls -->
+          <div class="grade-column">
+            <div class="grade-col-heading">
+              🌌 AMOLED True-Black Controls
+            </div>
 
-        <div class="field-row">
-          <div class="field-label">
-            <span>Black Floor Threshold (T_black):</span>
-            <span id="val-black-floor" class="val">22</span>
+            <div class="field-row">
+              <div class="field-label">
+                <span>Black Floor Threshold (T_black):</span>
+                <span id="val-black-floor" class="val">22</span>
+              </div>
+              <input type="range" id="slider-black-floor" min="0" max="60" value="22">
+              <span class="field-hint">Pushes background sky noise below threshold to strict RGB(0,0,0).</span>
+            </div>
+
+            <div class="field-row">
+              <div class="field-label">
+                <span>Soft-Knee Width (Cubic Hermite):</span>
+                <span id="val-knee-width" class="val">24</span>
+              </div>
+              <input type="range" id="slider-knee-width" min="5" max="50" value="24">
+              <span class="field-hint">Prevents staircasing and color banding on faint nebular gas clouds.</span>
+            </div>
+
+            <div class="field-row">
+              <div class="field-label">
+                <span>Star Mask Protection:</span>
+                <span id="val-star-protect" class="val">85%</span>
+              </div>
+              <input type="range" id="slider-star-protect" min="0" max="100" value="85">
+              <span class="field-hint">Protects pinpoint background stars from being crushed to black.</span>
+            </div>
+
+            <!-- Dedicated Buttons for AMOLED Grading -->
+            <div class="grade-btn-row">
+              <button id="btn-apply-amoled" class="btn-primary" style="flex: 2; padding: 7px; min-width: 0; font-size: 11.5px;">🖤 Apply AMOLED Grade</button>
+              <button id="btn-reset-amoled" class="btn-secondary" style="flex: 1; padding: 7px; min-width: 0; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 11px;" title="Reset AMOLED black crushing to defaults">↩ Reset</button>
+            </div>
           </div>
-          <input type="range" id="slider-black-floor" min="0" max="60" value="22">
-          <span style="font-size: 10px; color: var(--text-muted);">Pushes background sky noise below threshold to strict RGB(0,0,0).</span>
-        </div>
 
-        <div class="field-row">
-          <div class="field-label">
-            <span>Soft-Knee Width (Cubic Hermite):</span>
-            <span id="val-knee-width" class="val">24</span>
+          <!-- Column B: Visual Enhancements (Exposure, Contrast, Saturation, Sharpness) -->
+          <div class="grade-column">
+            <div class="grade-col-heading grade-col-heading-accent">
+              ✨ Visual Enhancements
+            </div>
+
+            <div class="field-row">
+              <div class="field-label">
+                <span>Exposure (EV):</span>
+                <span id="val-exposure" class="val">+0.00 EV</span>
+              </div>
+              <input type="range" id="slider-exposure" min="-2.00" max="2.00" step="0.05" value="0.00">
+              <span class="field-hint">Increases overall luminosity and deep cosmic exposure.</span>
+            </div>
+
+            <div class="field-row">
+              <div class="field-label">
+                <span>Dynamic Contrast:</span>
+                <span id="val-contrast" class="val">1.08x</span>
+              </div>
+              <input type="range" id="slider-contrast" min="0.50" max="2.00" step="0.02" value="1.08">
+              <span class="field-hint">Expands dynamic range between interstellar dust and deep void.</span>
+            </div>
+
+            <div class="field-row">
+              <div class="field-label">
+                <span>Color Saturation:</span>
+                <span id="val-saturation" class="val">1.00x</span>
+              </div>
+              <input type="range" id="slider-saturation" min="0.00" max="2.00" step="0.05" value="1.00">
+              <span class="field-hint">Vibrancy of nebular gas emissions (H-alpha, O-III, sulfur).</span>
+            </div>
+
+            <div class="field-row">
+              <div class="field-label">
+                <span>Detail Sharpness:</span>
+                <span id="val-sharpness" class="val">0%</span>
+              </div>
+              <input type="range" id="slider-sharpness" min="0" max="100" step="5" value="0">
+              <span class="field-hint">Laplacian edge enhancement for crisp stars and dust filaments.</span>
+            </div>
+
+            <!-- Dedicated Buttons for Image Adjustments -->
+            <div class="grade-btn-row">
+              <button id="btn-apply-adjustments" class="btn-accent" style="flex: 2; padding: 7px; min-width: 0; font-size: 11.5px;">🎨 Apply Image Adjustments</button>
+              <button id="btn-reset-adjustments" class="btn-secondary" style="flex: 1; padding: 7px; min-width: 0; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 11px;" title="Reset image adjustments to defaults">↩ Reset</button>
+            </div>
           </div>
-          <input type="range" id="slider-knee-width" min="5" max="50" value="24">
-          <span style="font-size: 10px; color: var(--text-muted);">Prevents staircasing and color banding on faint nebular gas clouds.</span>
-        </div>
-
-        <div class="field-row">
-          <div class="field-label">
-            <span>Star Mask Protection:</span>
-            <span id="val-star-protect" class="val">85%</span>
-          </div>
-          <input type="range" id="slider-star-protect" min="0" max="100" value="85">
-          <span style="font-size: 10px; color: var(--text-muted);">Protects pinpoint background stars from being crushed to black.</span>
-        </div>
-
-        <!-- Dedicated Buttons for AMOLED Grading -->
-        <div style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin: 6px 0 12px 0;">
-          <button id="btn-apply-amoled" class="btn-primary" style="flex: 2; padding: 9px; min-width: 0; font-size: 12px;">🖤 Apply AMOLED Grade</button>
-          <button id="btn-reset-amoled" class="btn-secondary" style="flex: 1; padding: 9px; min-width: 0; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 8px; cursor: pointer; font-size: 11px;" title="Reset AMOLED black crushing to defaults">↩ Reset</button>
-        </div>
-
-        <!-- Group B: Visual Enhancements (Exposure, Contrast, Saturation, Sharpness) -->
-        <div style="font-size: 11px; font-weight: 700; color: var(--accent-magenta); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;">
-          ✨ Visual Enhancements
-        </div>
-
-        <div class="field-row">
-          <div class="field-label">
-            <span>Exposure (EV):</span>
-            <span id="val-exposure" class="val">+0.00 EV</span>
-          </div>
-          <input type="range" id="slider-exposure" min="-2.00" max="2.00" step="0.05" value="0.00">
-          <span style="font-size: 10px; color: var(--text-muted);">Increases overall luminosity and deep cosmic exposure.</span>
-        </div>
-
-        <div class="field-row">
-          <div class="field-label">
-            <span>Dynamic Contrast:</span>
-            <span id="val-contrast" class="val">1.08x</span>
-          </div>
-          <input type="range" id="slider-contrast" min="0.50" max="2.00" step="0.02" value="1.08">
-          <span style="font-size: 10px; color: var(--text-muted);">Expands dynamic range between interstellar dust and deep void.</span>
-        </div>
-
-        <div class="field-row">
-          <div class="field-label">
-            <span>Color Saturation:</span>
-            <span id="val-saturation" class="val">1.00x</span>
-          </div>
-          <input type="range" id="slider-saturation" min="0.00" max="2.00" step="0.05" value="1.00">
-          <span style="font-size: 10px; color: var(--text-muted);">Vibrancy of nebular gas emissions (H-alpha, O-III, sulfur).</span>
-        </div>
-
-        <div class="field-row">
-          <div class="field-label">
-            <span>Detail Sharpness:</span>
-            <span id="val-sharpness" class="val">0%</span>
-          </div>
-          <input type="range" id="slider-sharpness" min="0" max="100" step="5" value="0">
-          <span style="font-size: 10px; color: var(--text-muted);">Laplacian edge enhancement for crisp stars and dust filaments.</span>
-        </div>
-
-        <!-- Dedicated Buttons for Image Adjustments -->
-        <div style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; margin: 6px 0 10px 0;">
-          <button id="btn-apply-adjustments" class="btn-accent" style="flex: 2; padding: 9px; min-width: 0; font-size: 12px;">🎨 Apply Image Adjustments</button>
-          <button id="btn-reset-adjustments" class="btn-secondary" style="flex: 1; padding: 9px; min-width: 0; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 8px; cursor: pointer; font-size: 11px;" title="Reset image adjustments to defaults">↩ Reset</button>
         </div>
 
         <!-- Master Revert to Original Unaltered Master -->
-        <div style="display: flex; width: 100%; box-sizing: border-box; margin-top: 2px;">
-          <button id="btn-undo-grade" class="btn-secondary" style="width: 100%; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #8b9bb4; border-radius: 8px; cursor: pointer; font-size: 11px;" title="Revert all changes and restore original raw master image">
+        <div class="grade-revert-row">
+          <button id="btn-undo-grade" class="btn-secondary btn-revert-full" title="Revert all changes and restore original raw master image">
             🔄 Revert All to Original Master
           </button>
         </div>
@@ -508,6 +518,9 @@
             <div id="hud-res-badge" class="hud-res-badge" title="Click to view detailed image resolution specs">
               📐 -- &times; -- (-- MP) &bull; --
             </div>
+            <button id="btn-download-raw-master" class="btn-download-raw-master" title="Download the original full-resolution master image (PNG/JPEG/TIFF)">
+              ⬇️ Raw Master
+            </button>
             <div id="fps-counter" class="fps-badge">60 FPS</div>
             <button id="btn-hide-hud" title="Toggle HUD visibility (Hotkey: H)">🕶 Hide HUD (H)</button>
           </div>

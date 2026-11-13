@@ -114,15 +114,19 @@ async function main() {
     const topBarBox = await page.evaluate(() => {
       const tb = document.querySelector('.top-bar');
       const drawer = document.getElementById('drawer-grade');
+      const drawerBody = drawer ? drawer.querySelector('.drawer-body') : null;
       const tbRect = tb ? tb.getBoundingClientRect() : null;
       const dRect = drawer ? drawer.getBoundingClientRect() : null;
       return {
-        topBarBottom: tbRect ? tbRect.bottom : 0,
-        drawerTop: dRect ? dRect.top : 0,
-        overlap: dRect && tbRect ? (dRect.top < tbRect.bottom) : false
+        topBarBottom: tbRect ? Math.round(tbRect.bottom) : 0,
+        drawerTop: dRect ? Math.round(dRect.top) : 0,
+        overlap: dRect && tbRect ? (dRect.top < tbRect.bottom) : false,
+        drawerBodyScrollHeight: drawerBody ? drawerBody.scrollHeight : 0,
+        drawerBodyClientHeight: drawerBody ? drawerBody.clientHeight : 0,
+        drawerHasScroll: drawerBody ? (drawerBody.scrollHeight > drawerBody.clientHeight) : false
       };
     });
-    console.log(`  Top bar bottom: ${topBarBox.topBarBottom}px | Drawer top: ${topBarBox.drawerTop}px | Overlapping: ${topBarBox.overlap}`);
+    console.log(`  Top bar bottom: ${topBarBox.topBarBottom}px | Drawer top: ${topBarBox.drawerTop}px | Overlapping: ${topBarBox.overlap} | Drawer ScrollHeight: ${topBarBox.drawerBodyScrollHeight}px, ClientHeight: ${topBarBox.drawerBodyClientHeight}px, Drawer HasScroll: ${topBarBox.drawerHasScroll}`);
 
     await context.close();
   }
