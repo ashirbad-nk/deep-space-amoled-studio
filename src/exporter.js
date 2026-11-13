@@ -31,9 +31,19 @@ class Exporter {
     const title = options.title || 'Deep Space AMOLED Wallpaper';
     const presetMode = options.presetMode || 'custom';
     const durationSec = options.durationSec || 180;
+    const speedMultiplier = (typeof options.speedMultiplier === 'number' && options.speedMultiplier > 0) ? options.speedMultiplier : 1.0;
     const imageDataUri = options.imageDataUri;
     const customWaypointsJson = JSON.stringify(options.waypoints || []);
     const engineCode = options.engineCode;
+    const recipe = options.recipe || {
+      generator: 'Deep Space AMOLED Wallpaper Studio',
+      version: '2.0.0',
+      exportedAt: new Date().toISOString(),
+      presetMode,
+      durationSec,
+      speedMultiplier
+    };
+    const recipeJson = JSON.stringify(recipe, null, 2);
 
     if (!imageDataUri) {
       throw new Error("Exporter Error: imageDataUri is required.");
@@ -51,6 +61,18 @@ class Exporter {
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>${title}</title>
+
+  <!-- 
+  =============================================================================
+  DEEP SPACE AMOLED WALLPAPER STUDIO - RECIPE MANIFEST
+  =============================================================================
+  Generated with client-side GPU acceleration. Contains full photographic
+  recipe, master source metadata, tone curves, and spline kinematics.
+  -->
+  <script id="amoled-wallpaper-recipe" type="application/json">
+${recipeJson}
+  </script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
     html, body {
@@ -71,9 +93,12 @@ class Exporter {
 
     const EMBEDDED_IMAGE_DATA = "${imageDataUri}";
     const CUSTOM_WAYPOINTS = ${customWaypointsJson};
+    const WALLPAPER_RECIPE = ${recipeJson};
+    window.WALLPAPER_RECIPE = WALLPAPER_RECIPE;
 
     (function() {
       const DURATION_SEC = ${durationSec};
+      const SPEED_MULTIPLIER = ${speedMultiplier};
       const canvas = document.getElementById('wallpaper-canvas');
       const ctx = canvas.getContext('2d');
 
@@ -129,10 +154,11 @@ class Exporter {
           onImageReady();
         }
 
-        // Silent hotkeys: Spacebar to toggle play/pause, Double-click or F for Fullscreen
+        // Silent hotkeys: Spacebar to toggle play/pause, Double-click or F for Fullscreen, I to log recipe
         window.addEventListener('keydown', (e) => {
           if (e.code === 'Space') isPlaying = !isPlaying;
           if (e.key === 'f' || e.key === 'F') toggleFs();
+          if (e.key === 'i' || e.key === 'I') console.log('[Wallpaper Recipe]', WALLPAPER_RECIPE);
         });
         window.addEventListener('dblclick', toggleFs);
       }
@@ -152,7 +178,8 @@ class Exporter {
           lastTimestamp = timestamp;
 
           if (isPlaying && DURATION_SEC > 0) {
-            progress = (progress + (dt / DURATION_SEC)) % 1.0;
+            progress = (progress + ((dt / DURATION_SEC) * SPEED_MULTIPLIER)) % 1.0;
+            if (progress < 0) progress += 1.0;
           }
 
           render();

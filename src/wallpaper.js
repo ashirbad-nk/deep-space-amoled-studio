@@ -75,12 +75,12 @@
       thumb: 'images/thumbnails/phantom_galaxy.webp',
       src: (typeof window !== 'undefined' && window.DEFAULT_ASSETS && window.DEFAULT_ASSETS.phantom_galaxy) ? window.DEFAULT_ASSETS.phantom_galaxy : 'images/graded/phantom_galaxy_master.webp',
       fallback: 'images/graded/phantom_galaxy_master.webp',
-      rawUrl: 'https://cdn.esawebb.org/archives/images/large/weic2212a.jpg',
-      resBadge: '2K Ultra Master',
+      rawUrl: 'https://cdn.esawebb.org/archives/images/publicationjpg/weic2212a.jpg',
+      resBadge: '4K Ultra Master (9.3 MP)',
       blackLevel: '🖤 ~28% OLED Black',
       telescope: 'JWST MIRI',
-      width: 2560,
-      height: 1480
+      width: 4000,
+      height: 2313
     },
     'tarantula': {
       title: 'Tarantula Cosmic Web',
@@ -90,12 +90,12 @@
       thumb: 'images/thumbnails/tarantula.webp',
       src: (typeof window !== 'undefined' && window.DEFAULT_ASSETS && window.DEFAULT_ASSETS.tarantula) ? window.DEFAULT_ASSETS.tarantula : 'images/graded/tarantula_master.webp',
       fallback: 'images/graded/tarantula_master.webp',
-      rawUrl: 'https://cdn.esawebb.org/archives/images/large/weic2216a.jpg',
-      resBadge: 'Ultra Master',
+      rawUrl: 'https://cdn.esawebb.org/archives/images/publicationjpg/weic2216a.jpg',
+      resBadge: '4K Ultra Master (15.3 MP)',
       blackLevel: '🖤 ~14% OLED Black',
       telescope: 'JWST NIRCam',
-      width: 1200,
-      height: 1200
+      width: 3835,
+      height: 4000
     },
     'southern_ring': {
       title: 'Southern Ring of Fire',
@@ -105,12 +105,12 @@
       thumb: 'images/thumbnails/southern_ring.webp',
       src: (typeof window !== 'undefined' && window.DEFAULT_ASSETS && window.DEFAULT_ASSETS.southern_ring) ? window.DEFAULT_ASSETS.southern_ring : 'images/graded/southern_ring_master.webp',
       fallback: 'images/graded/southern_ring_master.webp',
-      rawUrl: 'https://cdn.esawebb.org/archives/images/large/weic2208a.jpg',
-      resBadge: '2K Ultra Master',
+      rawUrl: 'https://cdn.esawebb.org/archives/images/publicationjpg/weic2208a.jpg',
+      resBadge: '4K Ultra Master (15.3 MP)',
       blackLevel: '🖤 ~40% OLED Black',
       telescope: 'JWST NIRCam',
-      width: 2560,
-      height: 2454
+      width: 4000,
+      height: 3835
     },
     'cartwheel': {
       title: 'The Cartwheel Cosmic Collision',
@@ -120,12 +120,12 @@
       thumb: 'images/thumbnails/cartwheel.webp',
       src: (typeof window !== 'undefined' && window.DEFAULT_ASSETS && window.DEFAULT_ASSETS.cartwheel) ? window.DEFAULT_ASSETS.cartwheel : 'images/graded/cartwheel_master.webp',
       fallback: 'images/graded/cartwheel_master.webp',
-      rawUrl: 'https://cdn.esawebb.org/archives/images/large/weic2211a.jpg',
-      resBadge: '2K Ultra Master',
+      rawUrl: 'https://cdn.esawebb.org/archives/images/publicationjpg/weic2211a.jpg',
+      resBadge: '4K Ultra Master (14.7 MP)',
       blackLevel: '🖤 ~32% OLED Black',
       telescope: 'JWST MIRI',
-      width: 2560,
-      height: 2356
+      width: 4000,
+      height: 3682
     }
   };
 
@@ -513,10 +513,97 @@
 
   /**
    * Unified local file loader: reads untainted data URI, switches to studio,
-   * and auto-resumes any pending user action (AMOLED grade bake or HTML export).
+   * supports both direct image files and re-importing standalone HTML wallpaper recipes.
    */
   function handleLocalFileSelection(file) {
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file) return;
+
+    // Check if user dropped or selected an exported Standalone HTML wallpaper recipe!
+    if (file.name.toLowerCase().endsWith('.html') || file.type === 'text/html') {
+      const textReader = new FileReader();
+      textReader.onload = (evt) => {
+        const html = evt.target.result || '';
+        let imgData = null;
+        const matchData = html.match(/const EMBEDDED_IMAGE_DATA = "(data:[^"]+)";/);
+        if (matchData && matchData[1]) {
+          imgData = matchData[1];
+        } else {
+          const matchUrl = html.match(/const EMBEDDED_IMAGE_DATA = "([^"]+)";/);
+          if (matchUrl && matchUrl[1]) imgData = matchUrl[1];
+        }
+
+        if (!imgData) {
+          alert('Could not find embedded wallpaper image in this HTML file.');
+          return;
+        }
+
+        // Extract recipe if present
+        let recipe = null;
+        const matchRecipe = html.match(/<script id="amoled-wallpaper-recipe" type="application\/json">\s*([\s\S]*?)\s*<\/script>/);
+        if (matchRecipe && matchRecipe[1]) {
+          try {
+            recipe = JSON.parse(matchRecipe[1]);
+          } catch (e) {
+            console.warn('[Studio] Failed to parse embedded wallpaper recipe:', e);
+          }
+        }
+
+        const title = (recipe && recipe.source && recipe.source.title)
+          ? recipe.source.title
+          : file.name.replace(/\.html$/i, '');
+
+        loadImageSource(imgData, null, title, () => {
+          hideCorsHelperModal();
+          switchToScreen('studio');
+
+          if (recipe) {
+            // 1. Restore visual adjustment & AMOLED sliders
+            if (recipe.gradingRecipe) {
+              const gr = recipe.gradingRecipe;
+              const setSlider = (id, val, text) => {
+                const s = document.getElementById(`slider-${id}`);
+                const l = document.getElementById(`val-${id}`);
+                if (s && val !== undefined) {
+                  s.value = val;
+                  s.dataset.userModified = 'true';
+                }
+                if (l && text !== undefined) l.textContent = text;
+              };
+              if (gr.blackFloor !== undefined) setSlider('black-floor', gr.blackFloor, `${gr.blackFloor}`);
+              if (gr.kneeWidth !== undefined) setSlider('knee-width', gr.kneeWidth, `${gr.kneeWidth}`);
+              if (gr.starProtect !== undefined) setSlider('star-protect', gr.starProtect, `${gr.starProtect}%`);
+              if (gr.exposure !== undefined) setSlider('exposure', gr.exposure, `${gr.exposure > 0 ? '+' : ''}${parseFloat(gr.exposure).toFixed(2)} EV`);
+              if (gr.contrast !== undefined) setSlider('contrast', gr.contrast, `${parseFloat(gr.contrast).toFixed(2)}x`);
+              if (gr.saturation !== undefined) setSlider('saturation', gr.saturation, `${parseFloat(gr.saturation).toFixed(2)}x`);
+              if (gr.sharpness !== undefined) setSlider('sharpness', gr.sharpness, `${gr.sharpness}%`);
+            }
+
+            // 2. Restore motion, speed, & spline waypoints
+            if (recipe.cameraKinematics) {
+              const ck = recipe.cameraKinematics;
+              if (ck.loopDurationSec) loopDurationSec = ck.loopDurationSec;
+              if (ck.speedMultiplier) {
+                speedMultiplier = ck.speedMultiplier;
+                const spdEl = document.getElementById('select-speed');
+                if (spdEl) spdEl.value = `${speedMultiplier}`;
+              }
+              if (ck.mode && cameraEngine) {
+                cameraEngine.setMode(ck.mode);
+              }
+              if (ck.waypoints && ck.waypoints.length >= 4 && cameraEngine) {
+                cameraEngine.setCustomWaypoints(ck.waypoints);
+                updateSplineEditorView();
+              }
+            }
+            console.log('[Studio] Standalone wallpaper recipe restored successfully:', recipe);
+          }
+        });
+      };
+      textReader.readAsText(file);
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
       loadImageSource(evt.target.result, null, file.name, () => {
@@ -723,6 +810,9 @@
   /**
    * Evaluates image resolution, megapixels, aspect ratio, and wallpaper quality tier
    */
+  /**
+   * Evaluates image resolution, quality tier, and physical display coverage
+   */
   function calculateImageQualitySpecs(img, rawBlackPct = 0, isTainted = false) {
     const w = img.naturalWidth || img.width || 0;
     const h = img.naturalHeight || img.height || 0;
@@ -730,31 +820,50 @@
     const aspectVal = h > 0 ? (w / h) : 1;
     const aspectStr = aspectVal.toFixed(2);
 
+    // Compute user's physical display resolution awareness
+    let dispW = 1920;
+    let dispH = 1080;
+    let dpr = 1.0;
+    if (typeof window !== 'undefined') {
+      dpr = window.devicePixelRatio || 1;
+      dispW = Math.round((window.screen && window.screen.width ? window.screen.width : window.innerWidth) * dpr);
+      dispH = Math.round((window.screen && window.screen.height ? window.screen.height : window.innerHeight) * dpr);
+    }
+    const displayCoverage = (dispW > 0 && dispH > 0 && w > 0 && h > 0)
+      ? Math.min(w / dispW, h / dispH)
+      : 1.0;
+
     let tier = 'standard';
     let tierBadge = '🟠 Standard (< 1080p)';
     let tierClass = 'tier-standard';
-    let evalText = 'Lower resolution (under 2 MP). Deep macro zoom may show soft pixelation on large screens.';
+    let evalText = `Lower resolution (under 2 MP). Deep macro zoom may show soft pixelation on large screens (${displayCoverage.toFixed(1)}x display coverage).`;
 
     if (w >= 3840 || mp >= 8.0) {
       tier = 'ultra';
       tierBadge = (w >= 5120) ? '🟢 Ultra-HD 5K+ (Pristine)' : '🟢 Ultra-HD 4K (Pristine)';
       tierClass = 'tier-ultra';
-      evalText = 'Pristine ultra-high resolution master. Macro pan-and-zoom will stay tack-sharp on all screens.';
+      evalText = `Pristine ultra-high resolution master (${displayCoverage.toFixed(1)}x screen coverage). Macro pan-and-zoom will stay tack-sharp at full zoom.`;
     } else if (w >= 1920 || mp >= 2.0) {
       tier = 'fhd';
       tierBadge = '🟡 Full HD 1080p (High Quality)';
       tierClass = 'tier-fhd';
-      evalText = 'Crisp resolution for 1080p desktop and flagship phone screens. Moderate zoom remains sharp.';
+      evalText = `Crisp resolution (${displayCoverage.toFixed(1)}x screen coverage). Sharp at standard viewport, moderate zoom remains clean.`;
     }
 
     if (isTainted) {
       tierBadge += ' • ⚠️ Protected Remote Source (CORS)';
-      evalText = 'Live 60 FPS playback active! To grade AMOLED blacks or export HTML, click either feature to open the 2-step CORS Assistant and load a local copy.';
+      evalText += ' • To grade AMOLED blacks or export HTML, load a local copy.';
     }
+
+    let coverageBadge = `${displayCoverage.toFixed(1)}x Display`;
+    if (displayCoverage >= 2.0) coverageBadge = `🟢 ${displayCoverage.toFixed(1)}x Screen (Pristine Zoom)`;
+    else if (displayCoverage >= 1.0) coverageBadge = `🟢 ${displayCoverage.toFixed(1)}x Screen (Native Match)`;
+    else coverageBadge = `🟡 ${displayCoverage.toFixed(1)}x Screen (Sub-Display)`;
 
     return {
       w, h, mp, aspectVal, aspectStr,
       tier, tierBadge, tierClass, evalText,
+      dispW, dispH, displayCoverage, coverageBadge,
       rawBlackPct: rawBlackPct.toFixed(1),
       isTainted
     };
@@ -807,7 +916,7 @@
     else if (specs.tier === 'standard') shortTier = '🟠 Standard';
 
     hudResBadge.className = `hud-res-badge ${specs.tierClass}`;
-    hudResBadge.innerHTML = `📐 ${specs.w}×${specs.h} (${specs.mp.toFixed(1)} MP) &bull; ${shortTier}`;
+    hudResBadge.innerHTML = `📐 ${specs.w}×${specs.h} (${specs.mp.toFixed(1)} MP) &bull; ${shortTier} &bull; ${specs.coverageBadge}`;
   }
 
   /**
@@ -2411,12 +2520,16 @@
               const mp = (w * h) / 1000000;
               const cleanTitle = (page.title || '').replace(/^File:/i, '').replace(/\.(jpg|jpeg|png|webp|tif|tiff)$/i, '').replace(/_/g, ' ');
               items.push({
-                source: 'Wikimedia Astrophotography',
-                sourceTag: mp >= 8.0 ? 'ESO / Hubble Ultra-HD' : 'Deep Space Archive',
+                source: isTiff ? 'Observatory TIFF Archive' : 'Wikimedia Astrophotography',
+                sourceTag: isTiff ? `🔭 ${mp >= 10.0 ? mp.toFixed(0) : mp.toFixed(1)} MP TIFF Master` : (mp >= 8.0 ? 'ESO / Hubble Ultra-HD' : 'Deep Space Archive'),
                 title: cleanTitle,
-                desc: `Public domain astronomical master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP).`,
+                desc: isTiff
+                  ? `Observatory uncompressed master. Original: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). High dynamic range for OLED.`
+                  : `Public domain astronomical master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP).`,
                 thumb: info.thumburl || info.url,
                 fullUrl: isTiff ? info.thumburl : info.url,
+                isTiff: isTiff,
+                pageTitle: page.title,
                 width: w,
                 height: h,
                 mp: mp
@@ -2453,12 +2566,16 @@
               const mp = (w * h) / 1000000;
               const cleanTitle = (page.title || '').replace(/^File:/i, '').replace(/\.(jpg|jpeg|png|webp|tif|tiff)$/i, '').replace(/_/g, ' ');
               items.push({
-                source: 'Observatory Survey Archive',
-                sourceTag: mp >= 10.0 ? `🔭 Ultra-HD Master (${mp.toFixed(1)} MP)` : '🔭 Survey Release',
+                source: isTiff ? 'Observatory TIFF Archive' : 'Observatory Survey Archive',
+                sourceTag: isTiff ? `🔭 ${mp >= 10.0 ? mp.toFixed(0) : mp.toFixed(1)} MP TIFF Master` : (mp >= 10.0 ? `🔭 Ultra-HD Master (${mp.toFixed(1)} MP)` : '🔭 Survey Release'),
                 title: cleanTitle,
-                desc: `Observatory survey archive master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). High dynamic contrast for OLED.`,
+                desc: isTiff
+                  ? `Observatory uncompressed master. Original: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). High dynamic contrast for OLED.`
+                  : `Observatory survey archive master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). High dynamic contrast for OLED.`,
                 thumb: info.thumburl || info.url,
                 fullUrl: isTiff ? info.thumburl : info.url,
+                isTiff: isTiff,
+                pageTitle: page.title,
                 width: w,
                 height: h,
                 mp: mp
@@ -2497,12 +2614,16 @@
               const mp = (w * h) / 1000000;
               const cleanTitle = (page.title || '').replace(/^File:/i, '').replace(/\.(jpg|jpeg|png|webp|tif|tiff)$/i, '').replace(/_/g, ' ');
               items.push({
-                source: 'European Southern Observatory',
-                sourceTag: mp >= 15.0 ? `🏔️ ESO Ultra-HD (${mp.toFixed(1)} MP)` : '🏔️ ESO / VLT Master',
+                source: isTiff ? 'ESO TIFF Archive' : 'European Southern Observatory',
+                sourceTag: isTiff ? `🏔️ ${mp >= 10.0 ? mp.toFixed(0) : mp.toFixed(1)} MP TIFF Master` : (mp >= 15.0 ? `🏔️ ESO Ultra-HD (${mp.toFixed(1)} MP)` : '🏔️ ESO / VLT Master'),
                 title: cleanTitle,
-                desc: `European Southern Observatory (VLT / ALMA) deep-space master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). High dynamic contrast for AMOLED.`,
+                desc: isTiff
+                  ? `ESO uncompressed master. Original: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). High dynamic contrast for AMOLED.`
+                  : `European Southern Observatory (VLT / ALMA) deep-space master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). High dynamic contrast for AMOLED.`,
                 thumb: info.thumburl || info.url,
                 fullUrl: isTiff ? info.thumburl : info.url,
+                isTiff: isTiff,
+                pageTitle: page.title,
                 width: w,
                 height: h,
                 mp: mp
@@ -2541,12 +2662,16 @@
               const mp = (w * h) / 1000000;
               const cleanTitle = (page.title || '').replace(/^File:/i, '').replace(/\.(jpg|jpeg|png|webp|tif|tiff)$/i, '').replace(/_/g, ' ');
               items.push({
-                source: 'Chandra X-Ray Observatory',
-                sourceTag: '⚡ Pure OLED Black (X-Ray)',
+                source: isTiff ? 'Chandra TIFF Master' : 'Chandra X-Ray Observatory',
+                sourceTag: isTiff ? `⚡ ${mp >= 10.0 ? mp.toFixed(0) : mp.toFixed(1)} MP TIFF Master` : '⚡ Pure OLED Black (X-Ray)',
                 title: cleanTitle,
-                desc: `Chandra X-ray Observatory master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). 0-nit pitch black background with glowing relativistic emissions.`,
+                desc: isTiff
+                  ? `Chandra X-ray uncompressed master. Original: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). Relativistic high-energy emissions on 0-nit black.`
+                  : `Chandra X-ray Observatory master. Resolution: ${w.toLocaleString()} × ${h.toLocaleString()} (${mp.toFixed(1)} MP). 0-nit pitch black background with glowing relativistic emissions.`,
                 thumb: info.thumburl || info.url,
                 fullUrl: isTiff ? info.thumburl : info.url,
+                isTiff: isTiff,
+                pageTitle: page.title,
                 width: w,
                 height: h,
                 mp: mp
@@ -2705,9 +2830,30 @@
               });
             }
           } else {
-            // Direct Wikimedia high-res master
+            let loadUrl = res.fullUrl || res.thumb;
+
+            // If it's an uncompressed TIFF master, resolve the 5K Web-compatible JPEG from Wikimedia
+            if (res.isTiff && res.pageTitle) {
+              try {
+                btn.textContent = '⏳ Resolving 5K TIFF Master...';
+                const tiffApiUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(res.pageTitle)}&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=5120&format=json&origin=*`;
+                const tResp = await fetch(tiffApiUrl);
+                if (tResp.ok) {
+                  const tData = await tResp.json();
+                  const p = tData.query && tData.query.pages ? Object.values(tData.query.pages)[0] : null;
+                  if (p && p.imageinfo && p.imageinfo[0] && p.imageinfo[0].thumburl) {
+                    loadUrl = p.imageinfo[0].thumburl;
+                    console.log(`[Studio] Resolved 5K web master from TIFF: ${loadUrl}`);
+                  }
+                }
+              } catch (e) {
+                console.warn('[Studio] Failed to query 5K TIFF, falling back to default preview:', e);
+              }
+            }
+
+            // Direct high-res master
             btn.textContent = 'Explore Vista →';
-            fetchAndLoadImage(res.fullUrl || res.thumb, res.thumb, res.title, () => {
+            fetchAndLoadImage(loadUrl, res.thumb, res.title, () => {
               switchToScreen('studio');
             });
           }
@@ -3063,15 +3209,61 @@
             : generateExportFilename('html', resMode === 'original' ? currentPresetKey : resMode);
           if (!filename.toLowerCase().endsWith('.html')) filename += '.html';
 
+          const floorEl = document.getElementById('slider-black-floor');
+          const kneeEl = document.getElementById('slider-knee-width');
+          const starEl = document.getElementById('slider-star-protect');
+          const expEl = document.getElementById('slider-exposure');
+          const contEl = document.getElementById('slider-contrast');
+          const satEl = document.getElementById('slider-saturation');
+          const sharpEl = document.getElementById('slider-sharpness');
+          const statBlackEl = document.getElementById('stat-graded-black');
+          const statOledEl = document.getElementById('stat-oled-savings');
+
+          const recipe = {
+            generator: 'Deep Space AMOLED Wallpaper Studio',
+            version: '2.0.0',
+            exportedAt: new Date().toISOString(),
+            source: {
+              title: activeImageTitle || 'Deep Space Astronomical Vista',
+              masterResolution: `${rawSourceImage.naturalWidth || origW}x${rawSourceImage.naturalHeight || origH}`,
+              aspectRatio: activeImageSpecs ? activeImageSpecs.aspectStr : (origW / origH).toFixed(2),
+              sourceUrl: (rawSourceImage.src && !rawSourceImage.src.startsWith('data:') && !rawSourceImage.src.startsWith('blob:')) ? rawSourceImage.src : null
+            },
+            gradingRecipe: {
+              isGraded: isGraded,
+              blackFloor: floorEl ? parseFloat(floorEl.value) : 22,
+              kneeWidth: kneeEl ? parseFloat(kneeEl.value) : 24,
+              starProtect: starEl ? parseFloat(starEl.value) : 85,
+              exposure: expEl ? parseFloat(expEl.value) : 0.0,
+              contrast: contEl ? parseFloat(contEl.value) : 1.08,
+              saturation: satEl ? parseFloat(satEl.value) : 1.00,
+              sharpness: sharpEl ? parseFloat(sharpEl.value) : 0,
+              stats: {
+                blackPercentage: statBlackEl ? statBlackEl.textContent : null,
+                estimatedOledSavings: statOledEl ? statOledEl.textContent : null
+              }
+            },
+            cameraKinematics: {
+              mode: cameraEngine.mode,
+              loopDurationSec: loopDurationSec,
+              speedMultiplier: speedMultiplier,
+              waypoints: cameraEngine.getWaypoints(),
+              preset: preset.label
+            },
+            exportResolution: (resMode === 'original') ? `${origW}x${origH}` : `${origW}x${origH}`
+          };
+
           Exporter.exportStandaloneHtml({
             title: `Deep Space AMOLED Wallpaper (${preset.label})`,
             badge: `${preset.label} &bull; Custom Loop`,
             presetMode: cameraEngine.mode,
             durationSec: loopDurationSec,
+            speedMultiplier: speedMultiplier,
             waypoints: cameraEngine.getWaypoints(),
             imageDataUri: dataUri,
             engineCode: engineStr,
-            filename: filename
+            filename: filename,
+            recipe: recipe
           });
 
           btnExportHtml.textContent = '💾 Download Standalone HTML';
