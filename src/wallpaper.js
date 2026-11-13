@@ -892,6 +892,56 @@
   }
 
   /**
+   * Updates Step 1 UI state when remote CORS prevents direct pixel grading
+   */
+  function updateStep1CorsUi(isTainted) {
+    const banner = document.getElementById('banner-step1-cors');
+    const hostEl = document.getElementById('step1-cors-host');
+    const elRaw = document.getElementById('stat-raw-black');
+    const elGraded = document.getElementById('stat-graded-black');
+    const elSavings = document.getElementById('stat-oled-savings');
+
+    if (isTainted) {
+      if (banner) banner.style.display = 'flex';
+      let host = 'external-server';
+      try {
+        if (rawSourceImage && rawSourceImage.src && rawSourceImage.src.startsWith('http')) {
+          host = new URL(rawSourceImage.src).hostname;
+        }
+      } catch (e) {}
+      if (hostEl) hostEl.textContent = host;
+
+      if (elRaw && (!elRaw.textContent || elRaw.textContent === '0.00%')) {
+        elRaw.textContent = '🔒 CORS';
+      }
+      if (elGraded && elGraded.textContent === '--%') {
+        elGraded.textContent = '🔒 Locked';
+      }
+      if (elSavings && elSavings.textContent === '--%') {
+        elSavings.textContent = '🔒 Locked';
+      }
+    } else {
+      if (banner) banner.style.display = 'none';
+    }
+  }
+
+  /**
+   * Pulses the Step 1 CORS banner to draw user attention when adjustments are attempted on a tainted image
+   */
+  function pulseCorsBanner() {
+    const banner = document.getElementById('banner-step1-cors');
+    if (banner) {
+      banner.style.display = 'flex';
+      banner.classList.remove('highlight-pulse');
+      void banner.offsetWidth; // Force CSS reflow
+      banner.classList.add('highlight-pulse');
+      try {
+        banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (e) {}
+    }
+  }
+
+  /**
    * Unified local file loader: reads untainted data URI, switches to studio,
    * supports both direct image files and re-importing standalone HTML wallpaper recipes.
    */
@@ -991,10 +1041,11 @@
         switchToScreen('studio');
 
         // Check if there was an action waiting for an untainted image
-        if (activePendingAction === 'grade') {
+        if (activePendingAction === 'grade' || activePendingAction === 'amoled' || activePendingAction === 'adjustments') {
+          const resumeType = (activePendingAction === 'adjustments') ? 'adjustments' : 'amoled';
           activePendingAction = null;
-          console.log('[Studio] Auto-resuming AMOLED grade baking with untainted local copy...');
-          setTimeout(applyInBrowserGrade, 150);
+          console.log(`[Studio] Auto-resuming ${resumeType} baking with untainted local copy...`);
+          setTimeout(() => applyInBrowserGrade(resumeType, false), 150);
         } else if (activePendingAction === 'export_html') {
           activePendingAction = null;
           console.log('[Studio] Auto-resuming Standalone HTML export with untainted local copy...');
@@ -1069,6 +1120,14 @@
         inputCorsFile.value = '';
       });
     }
+
+    // 3. Step 1 In-Drawer CORS Quick Resolution
+    const btnStep1ResolveCors = document.getElementById('btn-step1-resolve-cors');
+    if (btnStep1ResolveCors) {
+      btnStep1ResolveCors.addEventListener('click', () => {
+        showCorsHelperModal('grade');
+      });
+    }
   }
 
   /**
@@ -1117,6 +1176,7 @@
       // Accurately verify if canvas is tainted in this browser environment
       isCanvasTainted = testCanvasTaint(rawSourceImage);
       console.log(`[Studio] Image loaded: ${rawSourceImage.naturalWidth} x ${rawSourceImage.naturalHeight} (${title}) [tainted: ${isCanvasTainted}]`);
+      updateStep1CorsUi(isCanvasTainted);
       imageLoaded = true;
       if (activeRenderDrawable && typeof ImageBitmap !== 'undefined' && activeRenderDrawable instanceof ImageBitmap) {
         try { activeRenderDrawable.close(); } catch (e) {}
@@ -1319,15 +1379,20 @@
     else if (specs.tier === 'fhd') shortTier = '🟡 1080p FHD';
     else if (specs.tier === 'standard') shortTier = '🟠 Standard';
 
+    const corsNotice = specs.isTainted ? ' &bull; <span style="color: #ffb74d;" title="CORS restricted: save local copy in Step 1 to unlock pixel grading">🔒 CORS</span>' : '';
+
     hudResBadge.className = `hud-res-badge ${specs.tierClass}`;
-    hudResBadge.innerHTML = `📐 ${specs.w}×${specs.h} (${specs.mp.toFixed(1)} MP) &bull; ${shortTier} &bull; ${specs.coverageBadge}`;
+    hudResBadge.innerHTML = `📐 ${specs.w}×${specs.h} (${specs.mp.toFixed(1)} MP) &bull; ${shortTier} &bull; ${specs.coverageBadge}${corsNotice}`;
   }
 
   /**
    * Runs auto telemetry calculation for black levels
    */
   function runAutoGradeTelemetry() {
-    if (isCanvasTainted) return;
+    if (isCanvasTainted) {
+      updateStep1CorsUi(true);
+      return;
+    }
     setTimeout(() => {
       try {
         const stats = gradingEngine.analyzeImage(rawSourceImage);
@@ -1639,38 +1704,47 @@
     isGradingActive = true;
 
     const btnBake = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
+    const btnAdj = document.getElementById('btn-apply-adjustments');
 
     if (isCanvasTainted) {
       isGradingActive = false;
+      const targetBtn = (triggerType === 'adjustments') ? btnAdj : btnBake;
+      pulseCorsBanner();
+
       if (rawSourceImage.src && (rawSourceImage.src.startsWith('http://') || rawSourceImage.src.startsWith('https://'))) {
-        if (btnBake && !isPreview) btnBake.textContent = '⏳ Untainting Source...';
-        fetch(`https://images.weserv.nl/?url=${encodeURIComponent(rawSourceImage.src)}&output=jpg`)
+        if (targetBtn && !isPreview) targetBtn.textContent = '⏳ Unlocking Source...';
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+        fetch(`https://images.weserv.nl/?url=${encodeURIComponent(rawSourceImage.src)}&output=jpg`, { signal: controller.signal })
           .then(res => {
+            clearTimeout(timeoutId);
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.blob();
           })
           .then(blob => {
             const cleanBlobUrl = URL.createObjectURL(blob);
-            console.log('[Studio] Auto-untainted remote source for AMOLED grading!');
+            console.log('[Studio] Auto-untainted remote source for grading!');
             loadImageSource(cleanBlobUrl, null, activeImageTitle, () => {
               setTimeout(() => applyInBrowserGrade(triggerType, isPreview), 50);
             }, false);
           })
           .catch(err => {
+            clearTimeout(timeoutId);
             console.warn('[Studio] Auto-untaint for grading failed, showing assistant:', err.message);
             if (!isPreview) {
-              showCorsHelperModal('grade');
-              if (btnBake) btnBake.textContent = '🖤 Apply AMOLED Grade';
+              showCorsHelperModal(triggerType);
+              if (btnBake) btnBake.textContent = '🖤 Apply AMOLED True-Black';
+              if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments';
             }
           });
         return;
       }
 
       if (!isPreview) {
-        showCorsHelperModal('grade');
-        const btnAmoled = document.getElementById('btn-apply-amoled') || document.getElementById('btn-bake-grade');
-        const btnAdj = document.getElementById('btn-apply-adjustments');
-        if (btnAmoled) btnAmoled.textContent = '🖤 Apply AMOLED Grade';
+        showCorsHelperModal(triggerType);
+        if (btnBake) btnBake.textContent = '🖤 Apply AMOLED True-Black';
         if (btnAdj) btnAdj.textContent = '🎨 Apply Image Adjustments';
       }
       return;
@@ -1903,6 +1977,7 @@
     const specs = calculateImageQualitySpecs(rawSourceImage, 0, isCanvasTainted);
     activeImageSpecs = specs;
     updateHudResolutionBadge(specs);
+    updateStep1CorsUi(isCanvasTainted);
 
     const elGraded = document.getElementById('stat-graded-black');
     if (elGraded) elGraded.textContent = '--%';
@@ -3564,8 +3639,12 @@
     const triggerDebouncedGrade = (type = 'adjustments', isFast = true) => {
       if (gradeDebounceTimer) clearTimeout(gradeDebounceTimer);
       gradeDebounceTimer = setTimeout(() => {
-        if (imageLoaded && rawSourceImage && !isCanvasTainted) {
-          applyInBrowserGrade(type, isFast);
+        if (imageLoaded && rawSourceImage) {
+          if (!isCanvasTainted) {
+            applyInBrowserGrade(type, isFast);
+          } else {
+            pulseCorsBanner();
+          }
         }
       }, 80);
     };
@@ -3594,8 +3673,13 @@
 
         // When user finishes dragging the slider, bake at full quality
         el.addEventListener('change', () => {
-          if (imageLoaded && rawSourceImage && !isCanvasTainted) {
-            applyInBrowserGrade(isAmoled ? 'amoled' : 'adjustments', false);
+          if (imageLoaded && rawSourceImage) {
+            if (!isCanvasTainted) {
+              applyInBrowserGrade(isAmoled ? 'amoled' : 'adjustments', false);
+            } else {
+              pulseCorsBanner();
+              showCorsHelperModal(isAmoled ? 'amoled' : 'adjustments');
+            }
           }
         });
       }

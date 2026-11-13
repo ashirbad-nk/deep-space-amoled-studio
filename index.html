@@ -235,6 +235,24 @@
         <button class="btn-close">&times;</button>
       </div>
       <div class="drawer-body">
+        <!-- CORS Warning & Quick Unlock Banner for Step 1 (Dynamic: Shown when remote image has CORS restrictions) -->
+        <div id="banner-step1-cors" class="step1-cors-banner" style="display: none;">
+          <div class="step1-cors-header">
+            <span class="step1-cors-icon">🔒</span>
+            <div class="step1-cors-title-group">
+              <span class="step1-cors-title">Remote Image CORS Restricted</span>
+              <span class="step1-cors-subtitle">Direct pixel grading & adjustments blocked by host</span>
+            </div>
+          </div>
+          <p class="step1-cors-desc">
+            The external host (<code id="step1-cors-host">external server</code>) prohibits in-browser pixel reads.
+            60 FPS camera motion is live, but in-browser AMOLED grading and adjustments require a local file copy.
+          </p>
+          <button id="btn-step1-resolve-cors" class="btn-step1-cors-action" type="button">
+            🔓 Unlock Adjustments (Save Local Copy)
+          </button>
+        </div>
+
         <!-- Compact 1-Line Telemetry Strip -->
         <div class="telemetry-card telemetry-card-compact">
           <div class="telemetry-row">
@@ -612,7 +630,7 @@
       <div class="modal-body">
         <p class="cors-explainer">
           The external server (<code id="cors-host-name">nasa.gov</code>) restricts direct in-browser pixel manipulation.
-          Live 60 FPS wallpaper playback works normally, but <strong>AMOLED True-Black grading</strong> and <strong>Standalone HTML export</strong> require a local file copy.
+          Live 60 FPS wallpaper playback works normally, but <strong>AMOLED True-Black grading, visual adjustments</strong>, and <strong>Standalone HTML export</strong> require a local file copy.
         </p>
 
         <div class="cors-steps-grid">
