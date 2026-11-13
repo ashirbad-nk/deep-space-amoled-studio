@@ -852,6 +852,19 @@
         if (modal) modal.classList.add('hidden');
         return;
       }
+
+      // If server returned 404 Not Found (e.g. coordinates outside footprint), handle gracefully
+      if (err && err.message && err.message.includes('404')) {
+        console.warn(`[Studio] Target outside archive footprint (HTTP 404): ${url}`);
+        if (fallbackUrl && fallbackUrl !== url && !fallbackUrl.includes('skyserver.sdss.org')) {
+          console.log(`[Studio] Auto-recovering with fallback survey: ${fallbackUrl}`);
+          return fetchAndLoadImage(fallbackUrl, null, title, onComplete);
+        }
+        if (modal) modal.classList.add('hidden');
+        alert(`Astronomical Archive Notice: The requested coordinates (${title}) are outside this survey's coverage footprint (HTTP 404).\n\nTip: Extragalactic surveys like SDSS avoid the Milky Way Galactic Plane. Try unWISE Deep Infrared or an alternative sky region.`);
+        return;
+      }
+
       console.warn('[Studio] Streaming fetch failed (CORS/proxy restriction). Streaming directly into 60 FPS engine:', err);
 
       // KEEP MODAL VISIBLE! Continuous UI status feedback prevents confusion on large images
@@ -2804,12 +2817,80 @@
     ];
 
     /**
+     * Calculates the J2000 Galactic Latitude b (degrees) for given RA and Dec
+     */
+    function getGalacticLatitude(ra, dec) {
+      const deg2rad = Math.PI / 180;
+      const rad2deg = 180 / Math.PI;
+      const raRad = ra * deg2rad;
+      const decRad = dec * deg2rad;
+      const raGP = 192.85948 * deg2rad; // North Galactic Pole RA (12h 51.4m)
+      const decGP = 27.12825 * deg2rad; // North Galactic Pole Dec (+27° 07.7')
+
+      const sinB = Math.sin(decRad) * Math.sin(decGP) +
+                   Math.cos(decRad) * Math.cos(decGP) * Math.cos(raRad - raGP);
+      return Math.asin(Math.max(-1, Math.min(1, sinB))) * rad2deg;
+    }
+
+    /**
+     * Accurately determines if celestial coordinates are within the SDSS imaging footprint.
+     * SDSS is an extragalactic cosmology survey that strictly avoids the Milky Way Galactic Plane (|b| < 20°).
+     */
+    function isInsideSdssFootprint(ra, dec) {
+      if (dec < -15 || dec > 75) return false;
+
+      const b = getGalacticLatitude(ra, dec);
+
+      // Stripe 82: narrow equatorial strip observed by SDSS
+      const isStripe82 = Math.abs(dec) <= 1.5 && (ra >= 310 || ra <= 60);
+      if (isStripe82) return true;
+
+      // Milky Way Galactic Plane (|b| < 20°) is outside SDSS optical imaging
+      if (Math.abs(b) < 20) return false;
+
+      // Northern Galactic Cap (NGP): b >= 25°
+      if (b >= 25 && dec >= -11 && dec <= 70) return true;
+
+      // Southern Galactic Cap (SGP): b <= -25° and dec between -15° and 35°
+      if (b <= -25 && dec >= -15 && dec <= 35) return true;
+
+      return Math.abs(b) >= 22;
+    }
+
+    /**
      * Parses direct celestial coordinates:
-     * e.g. "83.822, -5.391", "ra: 83.822 dec: -5.391", "161.27 -59.88"
+     * Supports both Decimal Degrees ("83.822, -5.391", "ra: 83.822 dec: -5.391")
+     * and Sexagesimal HMS / DMS format ("05:28:05.9, +34:25:26", "05h 28m 05.9s, +34° 25' 26\"")
      */
     function parseCoordinates(query) {
       if (!query) return null;
       const str = query.trim();
+
+      // 1. Check Sexagesimal HMS / DMS (e.g. "05:28:05.9, +34:25:26", "05h28m05.9s +34d25m26s", "05 28 05.9 +34 25 26")
+      const sexaRegex = /^(?:ra[:\s]*)?(\d{1,2})[h:\s]+(\d{1,2})[m:\s]+(\d{1,2}(?:\.\d+)?)[s\s]*,?\s*(?:dec[:\s]*)?([+-]?\d{1,2})[d:°\s]+(\d{1,2})['m:\s]+(\d{1,2}(?:\.\d+)?)[s\"\s]*$/i;
+      const sm = str.match(sexaRegex);
+      if (sm) {
+        const raH = parseFloat(sm[1]);
+        const raM = parseFloat(sm[2]);
+        const raS = parseFloat(sm[3]);
+        const decSign = sm[4].includes('-') ? -1 : 1;
+        const decD = Math.abs(parseFloat(sm[4]));
+        const decM = parseFloat(sm[5]);
+        const decS = parseFloat(sm[6]);
+
+        if (raH < 24 && raM < 60 && raS < 60 && decD <= 90 && decM < 60 && decS < 60) {
+          const ra = (raH + raM / 60 + raS / 3600) * 15;
+          const dec = decSign * (decD + decM / 60 + decS / 3600);
+          return {
+            ra,
+            dec,
+            label: `Coordinates (${str.replace(/\s+/g, ' ')})`,
+            isSexagesimal: true
+          };
+        }
+      }
+
+      // 2. Check Decimal Degrees (e.g. "82.025, 34.424", "ra: 82.025 dec: 34.424", "-161.27 -59.88")
       const decRegex = /^(?:ra[:\s]*)?([-+]?\d+(?:\.\d+)?)[,\s]+(?:dec[:\s]*)?([-+]?\d+(?:\.\d+)?)$/i;
       const m = str.match(decRegex);
       if (m) {
@@ -2817,7 +2898,12 @@
         let dec = parseFloat(m[2]);
         if (!isNaN(ra) && !isNaN(dec) && ra >= -360 && ra <= 360 && dec >= -90 && dec <= 90) {
           if (ra < 0) ra += 360;
-          return { ra, dec, label: `Coordinates (${ra.toFixed(3)}°, ${dec.toFixed(3)}°)` };
+          return {
+            ra,
+            dec,
+            label: `Coordinates (${ra.toFixed(3)}°, ${dec.toFixed(3)}°)`,
+            isSexagesimal: false
+          };
         }
       }
       return null;
@@ -2950,7 +3036,13 @@
         const { ra, dec, scale = 0.5, name, desc = 'Deep space astronomical observation.' } = tgt;
         const raStr = ra.toFixed(4);
         const decStr = (dec >= 0 ? '+' : '') + dec.toFixed(4);
-        const coordBadge = `RA: ${raStr}° • Dec: ${decStr}°`;
+        const b = getGalacticLatitude(ra, dec);
+        const bStr = (b >= 0 ? '+' : '') + b.toFixed(1);
+        const isGalacticPlane = Math.abs(b) < 18;
+        const inSdss = isInsideSdssFootprint(ra, dec);
+
+        const planeNote = isGalacticPlane ? ` • Galactic Plane (b=${bStr}°)` : '';
+        const coordBadge = `RA: ${raStr}° • Dec: ${decStr}°${planeNote}`;
 
         // 1. If target has a curated Ultra-HD observatory survey master (Hubble/ESO/JWST), feature it first!
         if (tgt.master) {
@@ -2967,9 +3059,10 @@
           });
         }
 
-        // 2. SDSS DR18 Optical Sky Survey (where declination is in SDSS footprint: -15° to +75°)
+        // 2. SDSS DR18 Optical Sky Survey (ONLY when coordinates are genuinely inside SDSS footprint!)
+        // Prevents the "Requested (ra, dec) is outside SDSS footprint" HTTP 404 error
         // Upgraded to SDSS SkyServer server maximum: 4096x4096 (16.8 MP) Ultra-HD with native 0.396"/px resolution
-        if (!isGeneric && dec >= -15 && dec <= 75) {
+        if (!isGeneric && inSdss) {
           results.push({
             source: 'SDSS DR18 SkyServer',
             sourceTag: '🔭 SDSS Optical 16.8 MP (CORS-Free)',
@@ -2983,10 +3076,27 @@
           });
         }
 
-        // 3. For coordinates or objects without a curated master, provide DESI / DECam Optical Cutout
+        // 3. Galactic Plane All-Sky Deep Infrared:
+        // When in the Galactic Plane (|b| < 18°), optical surveys avoid dust extinction.
+        // unWISE Deep Infrared (7-Year Master on legacysurvey.org) provides full 100% sky coverage!
+        if (isGalacticPlane && !tgt.master) {
+          results.push({
+            source: 'unWISE Deep Sky Infrared Survey',
+            sourceTag: '🔭 unWISE Infrared 4.2 MP (All-Sky Galactic Plane)',
+            title: `${name} (unWISE Deep Infrared)`,
+            desc: `Wide-field Infrared Survey Explorer (unWISE 7-year NEO7 master). Penetrates interstellar dust in the Milky Way disc with zero extinction. ${coordBadge}. 100% CORS-free.`,
+            thumb: `https://www.legacysurvey.org/viewer/jpeg-cutout?ra=${ra}&dec=${dec}&width=600&height=400&layer=unwise-neo7&pixscale=1.0`,
+            fullUrl: `https://www.legacysurvey.org/viewer/jpeg-cutout?ra=${ra}&dec=${dec}&width=2048&height=2048&layer=unwise-neo7&pixscale=0.6`,
+            width: 2048,
+            height: 2048,
+            mp: 4.2
+          });
+        }
+
+        // 4. For coordinates or objects without a curated master, provide DESI / DECam Optical Cutout
         // Upgraded from 2048x2048 (4.2 MP) to 3000x3000 (9.0 MP) Ultra-HD with native 0.262"/px resolution
         // Dynamically selects ls-dr10 (northern/DESI footprint) or ls-dr9 (southern/DES footprint) for 100% sky coverage
-        if (!tgt.master) {
+        if (!tgt.master && (!isGalacticPlane || results.length === 0)) {
           const legacyLayer = (dec >= -18 && dec <= 84) ? 'ls-dr10' : 'ls-dr9';
           const directLegacyThumb = `https://www.legacysurvey.org/viewer/jpeg-cutout?ra=${ra}&dec=${dec}&width=600&height=400&layer=${legacyLayer}&pixscale=${scale.toFixed(2)}`;
           const proxyLegacyThumb = `https://images.weserv.nl/?url=${encodeURIComponent(directLegacyThumb)}`;
